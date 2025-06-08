@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Text Selector Extension",
+  "version": "1.0.0",
+  "description": "Select text and show it in a popup",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.js"],
+      "matches": ["<all_urls>"]
+    },
+    {
+      "resources": ["page-script.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "externally_connectable": {
+    "matches": ["<all_urls>"]
+  },
+  "icons": {}
+}
