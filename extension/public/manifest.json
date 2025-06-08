@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Text Selector Extension",
+  "name": "Nodit Extension",
   "version": "1.0.0",
-  "description": "Select text and show it in a popup",
+  "description": "Nodit Extension",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
   "action": {

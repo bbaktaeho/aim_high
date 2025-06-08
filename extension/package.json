@@ -8,10 +8,12 @@
   },
   "dependencies": {
     "@metamask/sdk": "^0.33.0",
+    "@metamask/snaps-sdk": "^7.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@metamask/snaps-cli": "^7.2.0",
     "@types/chrome": "^0.0.260",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
