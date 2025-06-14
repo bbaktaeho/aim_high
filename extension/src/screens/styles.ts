@@ -6,7 +6,8 @@ export const styles = {
     maxWidth: "400px",
     padding: "32px 24px",
     backgroundColor: "#FFFFFF",
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     boxSizing: "border-box" as const,
   },
   welcomeContainer: {
@@ -15,7 +16,8 @@ export const styles = {
     maxWidth: "400px",
     padding: "32px 24px",
     backgroundColor: "#FFFFFF",
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     boxSizing: "border-box" as const,
   },
   title: {
@@ -252,5 +254,87 @@ export const styles = {
   optionLabel: {
     fontSize: "14px",
     color: "#374151",
+  },
+  error: {
+    padding: "12px",
+    backgroundColor: "#FEE2E2",
+    color: "#DC2626",
+    borderRadius: "6px",
+    fontSize: "14px",
+    marginBottom: "16px",
+  },
+  formGroup: {
+    marginBottom: "16px",
+  },
+  section: {
+    marginTop: "24px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: "16px",
+  },
+  loading: {
+    textAlign: "center",
+    color: "#6B7280",
+    padding: "24px",
+  },
+  emptyState: {
+    textAlign: "center",
+    color: "#6B7280",
+    padding: "24px",
+    backgroundColor: "#F9FAFB",
+    borderRadius: "6px",
+  },
+  list: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  listItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "16px",
+    backgroundColor: "#F9FAFB",
+    borderRadius: "6px",
+    border: "1px solid #E5E7EB",
+  },
+  listItemContent: {
+    flex: 1,
+  },
+  listItemTitle: {
+    fontSize: "16px",
+    fontWeight: "500",
+    color: "#111827",
+    marginBottom: "4px",
+  },
+  listItemSubtitle: {
+    fontSize: "14px",
+    color: "#6B7280",
+    marginBottom: "4px",
+  },
+  listItemMeta: {
+    fontSize: "12px",
+    color: "#9CA3AF",
+  },
+  deleteButton: {
+    padding: "8px 16px",
+    backgroundColor: "#FEE2E2",
+    color: "#DC2626",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    transition: "all 0.2s",
+    ":hover": {
+      backgroundColor: "#FECACA",
+    },
+    ":disabled": {
+      opacity: 0.5,
+      cursor: "not-allowed",
+    },
   },
 };

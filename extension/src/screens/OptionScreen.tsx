@@ -1,54 +1,84 @@
-import React, { useEffect, useState } from 'react';
-import { styles } from './styles';
+import React, { useEffect, useState } from "react";
+import { styles } from "./styles";
 
 interface OptionScreenProps {
   onBack: () => void;
   onReset: () => void;
 }
 
-export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) => {
-  const [isEnabled, setIsEnabled] = React.useState<boolean>(false);
-  const [isTransactionCheckerEnabled, setIsTransactionCheckerEnabled] = React.useState<boolean>(false);
-  const [isResetting, setIsResetting] = useState(false);
+export const OptionScreen: React.FC<OptionScreenProps> = ({
+  onBack,
+  onReset,
+}) => {
+  const [isEnabled, setIsEnabled] = useState<boolean>(false);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [isTransactionCheckerEnabled, setIsTransactionCheckerEnabled] =
+    useState<boolean>(false);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [isWebhookEnabled, setIsWebhookEnabled] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     // Load extension state
-    chrome.storage.local.get(['isEnabled', 'isTransactionCheckerEnabled'], (result) => {
-      console.log('Extension state loaded:', result);
-      setIsEnabled(result.isEnabled ?? false);
-      setIsTransactionCheckerEnabled(result.isTransactionCheckerEnabled ?? false);
-    });
+    chrome.storage.local.get(
+      ["isEnabled", "isTransactionCheckerEnabled"],
+      (result) => {
+        console.log("Extension state loaded:", result);
+        setIsEnabled(result.isEnabled ?? false);
+        setIsTransactionCheckerEnabled(
+          result.isTransactionCheckerEnabled ?? false
+        );
+      }
+    );
+
+    // Load saved settings
+    const loadSettings = async () => {
+      const result = await chrome.storage.local.get([
+        "apiKey",
+        "webhookEnabled",
+      ]);
+      if (result.apiKey) {
+        setApiKey(result.apiKey);
+      }
+      if (result.webhookEnabled !== undefined) {
+        setIsWebhookEnabled(result.webhookEnabled);
+      }
+    };
+    loadSettings();
   }, []);
 
   const handleReset = async () => {
     setIsResetting(true);
     try {
       // Get the active tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       const currentTab = tabs[0];
-      
-      if (currentTab?.id && currentTab.url?.startsWith('http')) {
+
+      if (currentTab?.id && currentTab.url?.startsWith("http")) {
         // Notify content script about reset
         try {
-          await chrome.tabs.sendMessage(currentTab.id, { 
-            type: 'TOGGLE_EXTENSION', 
-            isEnabled: false 
+          await chrome.tabs.sendMessage(currentTab.id, {
+            type: "TOGGLE_EXTENSION",
+            isEnabled: false,
           });
         } catch (err) {
-          console.log('Content script not ready, continuing with reset');
+          console.log("Content script not ready, continuing with reset");
         }
       }
 
       // Clear all stored data
       await chrome.storage.local.clear();
-      
+
       // Reset extension state
       setIsEnabled(false);
-      
+
       // Notify parent component to show welcome screen
       onReset();
     } catch (error) {
-      console.error('Error resetting Nodit Key:', error);
+      console.error("Error resetting Nodit Key:", error);
     } finally {
       setIsResetting(false);
     }
@@ -62,13 +92,13 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     // 모든 탭에 상태 변경 알림 (현재 탭뿐만 아니라 모든 탭)
     try {
       const tabs = await chrome.tabs.query({});
-      
+
       for (const tab of tabs) {
-        if (tab.id && tab.url?.startsWith('http')) {
+        if (tab.id && tab.url?.startsWith("http")) {
           try {
-            await chrome.tabs.sendMessage(tab.id, { 
-              type: 'TOGGLE_EXTENSION', 
-              isEnabled: newState 
+            await chrome.tabs.sendMessage(tab.id, {
+              type: "TOGGLE_EXTENSION",
+              isEnabled: newState,
             });
           } catch (err) {
             // Content script가 없는 탭은 무시
@@ -77,7 +107,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
         }
       }
     } catch (error) {
-      console.log('Error broadcasting toggle state:', error);
+      console.log("Error broadcasting toggle state:", error);
     }
   };
 
@@ -85,12 +115,15 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     const newState = !isTransactionCheckerEnabled;
     setIsTransactionCheckerEnabled(newState);
     await chrome.storage.local.set({ isTransactionCheckerEnabled: newState });
-    
+
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       const currentTab = tabs[0];
-      
-      if (!currentTab?.id || !currentTab.url?.startsWith('http')) {
+
+      if (!currentTab?.id || !currentTab.url?.startsWith("http")) {
         return;
       }
 
@@ -99,25 +132,47 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
         try {
           await chrome.scripting.executeScript({
             target: { tabId: currentTab.id },
-            files: ['transaction-checker.js']
+            files: ["transaction-checker.js"],
           });
-          console.log('Transaction checker script injected');
+          console.log("Transaction checker script injected");
         } catch (err) {
-          console.error('Failed to inject transaction checker script:', err);
+          console.error("Failed to inject transaction checker script:", err);
         }
       } else {
         // 트랜잭션 체커 비활성화: 정리 메시지 전송
         try {
-          await chrome.tabs.sendMessage(currentTab.id, { 
-            type: 'CLEANUP_TRANSACTION_CHECKER'
+          await chrome.tabs.sendMessage(currentTab.id, {
+            type: "CLEANUP_TRANSACTION_CHECKER",
           });
-          console.log('Transaction checker cleanup message sent');
+          console.log("Transaction checker cleanup message sent");
         } catch (err) {
-          console.log('Transaction checker script not active, cleanup skipped');
+          console.log("Transaction checker script not active, cleanup skipped");
         }
       }
     } catch (error) {
-      console.error('Error toggling transaction checker:', error);
+      console.error("Error toggling transaction checker:", error);
+    }
+  };
+
+  const handleWebhookToggle = async () => {
+    const newState = !isTransactionCheckerEnabled;
+
+    setIsWebhookEnabled(newState);
+    await chrome.storage.local.set({ webhookEnabled: newState });
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      await chrome.storage.local.set({
+        apiKey,
+        webhookEnabled: isWebhookEnabled,
+      });
+      alert("설정이 저장되었습니다.");
+    } catch (error) {
+      alert("설정 저장에 실패했습니다.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -125,15 +180,33 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     <div style={styles.container}>
       <div style={styles.header}>
         <button onClick={onBack} style={styles.backButton}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M19 12H5M5 12L12 19M5 12L12 5"
+              stroke="#374151"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
         <h2 style={styles.title}>Settings</h2>
-        <div style={{ width: '40px' }} /> {/* Spacer for alignment */}
+        <div style={{ width: "40px" }} /> {/* Spacer for alignment */}
       </div>
 
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+      <div
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "8px",
+          border: "1px solid #E5E7EB",
+        }}
+      >
         <div style={styles.optionItem}>
           <span style={styles.optionLabel}>Nodit Supporter</span>
           <label style={styles.toggleSwitch}>
@@ -143,14 +216,18 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               onChange={handleToggle}
               style={styles.toggleInput}
             />
-            <span style={{
-              ...styles.toggleSlider,
-              ...(isEnabled ? styles.toggleSliderActive : {})
-            }}>
-              <span style={{
-                ...styles.toggleButton,
-                ...(isEnabled ? styles.toggleButtonActive : {})
-              }} />
+            <span
+              style={{
+                ...styles.toggleSlider,
+                ...(isEnabled ? styles.toggleSliderActive : {}),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.toggleButton,
+                  ...(isEnabled ? styles.toggleButtonActive : {}),
+                }}
+              />
             </span>
           </label>
         </div>
@@ -163,14 +240,46 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               onChange={handleTransactionCheckerToggle}
               style={styles.toggleInput}
             />
-            <span style={{
-              ...styles.toggleSlider,
-              ...(isTransactionCheckerEnabled ? styles.toggleSliderActive : {})
-            }}>
-              <span style={{
-                ...styles.toggleButton,
-                ...(isTransactionCheckerEnabled ? styles.toggleButtonActive : {})
-              }} />
+            <span
+              style={{
+                ...styles.toggleSlider,
+                ...(isTransactionCheckerEnabled
+                  ? styles.toggleSliderActive
+                  : {}),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.toggleButton,
+                  ...(isTransactionCheckerEnabled
+                    ? styles.toggleButtonActive
+                    : {}),
+                }}
+              />
+            </span>
+          </label>
+        </div>
+        <div style={styles.optionItem}>
+          <span style={styles.optionLabel}>Enable Webhook</span>
+          <label style={styles.toggleSwitch}>
+            <input
+              type="checkbox"
+              checked={isWebhookEnabled}
+              onChange={handleWebhookToggle}
+              style={styles.toggleInput}
+            />
+            <span
+              style={{
+                ...styles.toggleSlider,
+                ...(isWebhookEnabled ? styles.toggleSliderActive : {}),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.toggleButton,
+                  ...(isWebhookEnabled ? styles.toggleButtonActive : {}),
+                }}
+              />
             </span>
           </label>
         </div>
@@ -203,24 +312,24 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
         </div>
       </div>
 
-      <div style={{ marginTop: '24px' }}>
+      <div style={{ marginTop: "24px" }}>
         <button
           onClick={handleReset}
           disabled={isResetting}
           style={{
             ...styles.button,
-            backgroundColor: '#EF4444',
+            backgroundColor: "#EF4444",
             opacity: isResetting ? 0.8 : 1,
-            transition: 'background-color 0.2s ease',
+            transition: "background-color 0.2s ease",
           }}
           onMouseOver={(e) => {
             if (!isResetting) {
-              e.currentTarget.style.backgroundColor = '#DC2626';
+              e.currentTarget.style.backgroundColor = "#DC2626";
             }
           }}
           onMouseOut={(e) => {
             if (!isResetting) {
-              e.currentTarget.style.backgroundColor = '#EF4444';
+              e.currentTarget.style.backgroundColor = "#EF4444";
             }
           }}
         >
@@ -230,10 +339,16 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               Resetting...
             </div>
           ) : (
-            'Reset Nodit Key'
+            "Reset Nodit Key"
           )}
+        </button>
+      </div>
+
+      <div style={{ marginTop: "24px" }}>
+        <button onClick={handleSave} disabled={isLoading} style={styles.button}>
+          {isLoading ? "저장 중..." : "설정 저장"}
         </button>
       </div>
     </div>
   );
-}; 
+};
