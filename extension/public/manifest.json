@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Nodit Extension",
+  "name": "Nodit Minion",
   "version": "1.0.0",
   "description": "Nodit Extension",
   "permissions": ["storage", "activeTab", "scripting"],
@@ -24,6 +24,10 @@
   },
   "web_accessible_resources": [
     {
+      "resources": ["transaction.html", "transaction.js", "transaction-checker.js"],
+      "matches": ["<all_urls>"]
+    },
+    {
       "resources": ["*.js"],
       "matches": ["<all_urls>"]
     },
@@ -35,5 +39,10 @@
   "externally_connectable": {
     "matches": ["<all_urls>"]
   },
-  "icons": {}
+  "icons": {
+    "16": "nodit_16.jpeg",
+    "32": "nodit_32.jpeg",
+    "48": "nodit_48.jpeg",
+    "128": "nodit_128.jpeg"
+  }
 }

@@ -9,6 +9,8 @@ module.exports = {
     content: "./src/content.tsx",
     background: "./src/background.ts",
     "page-script": "./src/page-script.ts",
+    transaction: "./src/transaction.tsx",
+    "transaction-checker": "./src/transaction-checker.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -64,6 +66,11 @@ module.exports = {
       template: "./src/popup.html",
       filename: "popup.html",
       chunks: ["popup"],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/transaction.html",
+      filename: "transaction.html",
+      chunks: ["transaction"],
     }),
   ],
 };

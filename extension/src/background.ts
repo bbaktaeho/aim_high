@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener(() => {
 const activeTabs = new Set<number>();
 
 // Listen for content script ready message
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CONTENT_SCRIPT_READY" && sender.tab?.id) {
     activeTabs.add(sender.tab.id);
     // Send current state to the newly loaded content script
@@ -22,6 +22,16 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             // Ignore errors for initial state
           });
       }
+    });
+  }
+  if (message.type === "TX_CHECKER_SEND") {
+    // 트랜잭션 정보를 쿼리스트링으로 encode
+    const txData = encodeURIComponent(JSON.stringify(message.payload));
+    chrome.windows.create({
+      url: chrome.runtime.getURL("transaction.html?tx=" + txData),
+      type: "popup",
+      width: 420,
+      height: 600,
     });
   }
 });
