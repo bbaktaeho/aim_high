@@ -1059,22 +1059,26 @@ const styles = {
   floatingButton: {
     position: 'fixed',
     display: 'none',
-    padding: '10px 20px',
+    padding: '12px 24px',
     backgroundColor: '#10B981',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    zIndex: 10000,
+    zIndex: 999999,
     fontSize: '14px',
-    fontWeight: '500',
+    fontWeight: '600',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1)',
     transition: 'all 0.2s ease',
     transform: 'translate(-50%, 0)', // Center horizontally
+    whiteSpace: 'nowrap',
+    userSelect: 'none',
+    pointerEvents: 'auto',
     '&:hover': {
       backgroundColor: '#059669',
-      boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)',
+      boxShadow: '0 6px 16px rgba(16, 185, 129, 0.4), 0 4px 8px rgba(0, 0, 0, 0.15)',
+      transform: 'translate(-50%, -2px)',
     },
   },
   popupBox: {
@@ -1151,6 +1155,18 @@ const initializeContentScript = () => {
     console.log('Content script loaded extension state:', result);
     isEnabled = result.isEnabled ?? false;
     console.log('Nodit Supporter enabled:', isEnabled);
+    
+    // 상태 확인을 위한 추가 로그
+    if (isEnabled) {
+      console.log('✅ Nodit Supporter is ENABLED - Address detection will work');
+    } else {
+      console.log('❌ Nodit Supporter is DISABLED - Please enable it in the extension popup');
+    }
+  });
+  
+  // Request current state from background script
+  chrome.runtime.sendMessage({ type: 'REQUEST_STATE_SYNC' }).catch(() => {
+    console.log('Failed to request state sync from background');
   });
   
   // Inject page script
@@ -1175,42 +1191,183 @@ const initializeContentScript = () => {
   document.body.appendChild(floatingButton);
   document.body.appendChild(popupBox);
 
-  // 드래그 후 텍스트 선택 시 floatingButton 표시
-  document.addEventListener('mouseup', (event) => {
+  // 텍스트 선택 감지를 위한 함수
+  const handleTextSelection = (eventType: string) => {
+    console.log(`🖱️ ${eventType} event triggered`);
+    
     if (!isEnabled) {
+      console.log('❌ Extension is disabled');
       floatingButton.style.display = 'none';
       popupBox.style.display = 'none';
       return;
     }
+    
     const selection = window.getSelection();
+    console.log('📝 Selection object:', selection);
+    
     if (selection && selection.toString().trim().length > 0) {
-      const text = selection.toString().trim();
+      let text = selection.toString().trim();
+      console.log('📋 Selected text (raw):', JSON.stringify(text));
+      
+      // 텍스트 정리: 공백, 줄바꿈, 특수문자 제거
+      text = text.replace(/[\s\n\r\t]/g, '');
+      console.log('🧹 Cleaned text:', JSON.stringify(text));
+      
       // 이더리움 주소: 0x + 40자리 16진수, 트론 주소: T로 시작 34자리
       const ethRegex = /^0x[a-fA-F0-9]{40}$/;
       const tronRegex = /^T[a-zA-Z0-9]{33}$/;
-      if (ethRegex.test(text) || tronRegex.test(text)) {
+      
+      // 더 유연한 주소 감지: 텍스트 내에서 주소 패턴 찾기
+      const ethMatch = text.match(/0x[a-fA-F0-9]{40}/);
+      const tronMatch = text.match(/T[a-zA-Z0-9]{33}/);
+      
+      let detectedAddress = null;
+      if (ethRegex.test(text)) {
+        detectedAddress = text;
+        console.log('✅ Direct ETH address match:', detectedAddress);
+      } else if (tronRegex.test(text)) {
+        detectedAddress = text;
+        console.log('✅ Direct TRON address match:', detectedAddress);
+      } else if (ethMatch) {
+        detectedAddress = ethMatch[0];
+        console.log('✅ ETH address found in text:', detectedAddress);
+      } else if (tronMatch) {
+        detectedAddress = tronMatch[0];
+        console.log('✅ TRON address found in text:', detectedAddress);
+      }
+      
+      if (detectedAddress) {
+        console.log('🎯 Address detected:', detectedAddress);
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
-        // floatingButton 위치 조정
-        floatingButton.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
-        floatingButton.style.top = `${rect.bottom + 8 + window.scrollY}px`;
+        console.log('📐 Selection rect:', rect);
+        
+        // 뷰포트 정보 확인
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const scrollX = window.scrollX || window.pageXOffset;
+        const scrollY = window.scrollY || window.pageYOffset;
+        
+        console.log('📱 Viewport info:', {
+          viewportWidth,
+          viewportHeight,
+          scrollX,
+          scrollY
+        });
+        
+        // 버튼 크기 (대략적인 값)
+        const buttonWidth = 140;
+        const buttonHeight = 40;
+        
+        // 기본 위치: 선택 영역 중앙 하단
+        let left = rect.left + (rect.width / 2) - (buttonWidth / 2) + scrollX;
+        let top = rect.bottom + 10 + scrollY;
+        
+        // 화면 경계 체크 및 보정
+        if (left < 10) {
+          left = 10;
+        } else if (left + buttonWidth > viewportWidth - 10) {
+          left = viewportWidth - buttonWidth - 10;
+        }
+        
+        // 세로 위치 보정 - 화면 하단을 벗어나면 선택 영역 위쪽에 표시
+        if (top + buttonHeight > scrollY + viewportHeight - 10) {
+          top = rect.top - buttonHeight - 10 + scrollY;
+          console.log('📍 Button moved above selection due to viewport constraints');
+        }
+        
+        // 최종 위치 설정
+        floatingButton.style.left = `${left}px`;
+        floatingButton.style.top = `${top}px`;
         floatingButton.style.display = 'block';
-        selectedText = text;
+        floatingButton.style.zIndex = '999999'; // 매우 높은 z-index
+        floatingButton.style.position = 'absolute';
+        
+        // 버튼을 더 눈에 띄게 만들기
+        floatingButton.style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.4), 0 0 0 2px rgba(16, 185, 129, 0.2)';
+        floatingButton.style.animation = 'pulse 2s infinite';
+        
+        // CSS 애니메이션 추가
+        if (!document.getElementById('nodit-button-animation')) {
+          const style = document.createElement('style');
+          style.id = 'nodit-button-animation';
+          style.textContent = `
+            @keyframes pulse {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+              100% { transform: scale(1); }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        selectedText = detectedAddress;
         selectionRange = range;
+        
+        console.log('🔘 Floating button positioned at:', {
+          left: `${left}px`,
+          top: `${top}px`,
+          selectionRect: rect,
+          finalPosition: {
+            left: floatingButton.style.left,
+            top: floatingButton.style.top,
+            display: floatingButton.style.display,
+            zIndex: floatingButton.style.zIndex
+          }
+        });
+        
+        // 버튼이 실제로 화면에 보이는지 확인
+        setTimeout(() => {
+          const buttonRect = floatingButton.getBoundingClientRect();
+          const isVisible = buttonRect.top >= 0 && 
+                           buttonRect.left >= 0 && 
+                           buttonRect.bottom <= viewportHeight && 
+                           buttonRect.right <= viewportWidth;
+          
+          console.log('👁️ Button visibility check:', {
+            buttonRect,
+            isVisible,
+            computedStyle: window.getComputedStyle(floatingButton)
+          });
+          
+          if (!isVisible) {
+            console.warn('⚠️ Button may not be visible in viewport!');
+          }
+        }, 100);
       } else {
+        console.log('❌ No valid address found in text:', JSON.stringify(text));
         floatingButton.style.display = 'none';
         popupBox.style.display = 'none';
       }
     } else {
+      console.log('❌ No text selected');
       floatingButton.style.display = 'none';
       popupBox.style.display = 'none';
     }
+  };
+
+  // 드래그 후 텍스트 선택 시 floatingButton 표시 (mouseup 이벤트)
+  document.addEventListener('mouseup', () => handleTextSelection('mouseup'));
+  
+  // 텍스트 선택 변경 시 floatingButton 표시 (selectionchange 이벤트)
+  document.addEventListener('selectionchange', () => {
+    // selectionchange는 너무 자주 발생하므로 디바운스 적용
+    clearTimeout((window as any).selectionTimeout);
+    (window as any).selectionTimeout = setTimeout(() => {
+      handleTextSelection('selectionchange');
+    }, 100);
   });
 
   // floatingButton 클릭 시 바로 분석 실행
   floatingButton.addEventListener('click', async (event) => {
     event.stopPropagation();
+    console.log('🔘 Floating button clicked');
+    
     if (selectedText && selectionRange) {
+      // 버튼 클릭 시 즉시 버튼 숨기기
+      floatingButton.style.display = 'none';
+      console.log('👻 Floating button hidden after click');
+      
       const rect = selectionRange.getBoundingClientRect();
       
       // Calculate popup position to avoid going off-screen
@@ -1235,6 +1392,7 @@ const initializeContentScript = () => {
       popupBox.style.left = `${left}px`;
       popupBox.style.top = `${top}px`;
       popupBox.style.display = 'block';
+      console.log('📦 Popup box displayed');
       
       // 바로 계정 분석 실행
       await analyzeAccount(selectedText, popupContent);
@@ -1249,12 +1407,125 @@ const initializeContentScript = () => {
     ) {
       floatingButton.style.display = 'none';
       popupBox.style.display = 'none';
+      console.log('🖱️ Outside click - hiding button and popup');
+    }
+  });
+
+  // 텍스트 선택 해제 시 버튼 숨기기 (추가 보장)
+  document.addEventListener('click', (event) => {
+    // 버튼이나 팝업을 클릭한 경우가 아니라면
+    if (
+      !floatingButton.contains(event.target as Node) &&
+      !popupBox.contains(event.target as Node)
+    ) {
+      // 잠시 후 선택 상태 확인
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.toString().trim().length === 0) {
+          floatingButton.style.display = 'none';
+          console.log('🚫 Text selection cleared - hiding button');
+        }
+      }, 50);
     }
   });
 
   // Notify that content script is ready
   console.log('Content script initialized, sending CONTENT_SCRIPT_READY');
   chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });
+  
+  // 디버깅을 위한 전역 함수들 추가
+  (window as any).noditDebug = {
+    checkStatus: () => {
+      console.log('🔍 Nodit Extension Debug Info:');
+      console.log('- Extension enabled:', isEnabled);
+      console.log('- Floating button element:', floatingButton);
+      console.log('- Floating button display:', floatingButton?.style.display);
+      console.log('- Floating button position:', {
+        left: floatingButton?.style.left,
+        top: floatingButton?.style.top,
+        zIndex: floatingButton?.style.zIndex
+      });
+      console.log('- Popup box element:', popupBox);
+      console.log('- Popup box display:', popupBox?.style.display);
+      console.log('- Selected text:', selectedText);
+      console.log('- Is initialized:', isInitialized);
+      
+      const buttonRect = floatingButton?.getBoundingClientRect();
+      console.log('- Button bounding rect:', buttonRect);
+      
+      return {
+        isEnabled,
+        hasFloatingButton: !!floatingButton,
+        hasPopupBox: !!popupBox,
+        selectedText,
+        isInitialized,
+        buttonDisplay: floatingButton?.style.display,
+        buttonPosition: {
+          left: floatingButton?.style.left,
+          top: floatingButton?.style.top
+        },
+        buttonRect
+      };
+    },
+    testAddress: (address: string) => {
+      console.log('🧪 Testing address:', address);
+      const ethRegex = /^0x[a-fA-F0-9]{40}$/;
+      const tronRegex = /^T[a-zA-Z0-9]{33}$/;
+      const isEth = ethRegex.test(address);
+      const isTron = tronRegex.test(address);
+      console.log('- Is valid ETH address:', isEth);
+      console.log('- Is valid TRON address:', isTron);
+      return { isEth, isTron, isValid: isEth || isTron };
+    },
+    forceEnable: () => {
+      console.log('🔧 Force enabling extension...');
+      isEnabled = true;
+      chrome.storage.local.set({ isEnabled: true });
+      console.log('✅ Extension force enabled');
+    },
+    showButtonAtCenter: (address?: string) => {
+      console.log('🎯 Showing button at center of screen...');
+      const testAddress = address || '0xbe45c4C29c7ed2E5107eD93556A6F9601D74d665';
+      
+      // 화면 중앙에 버튼 표시
+      floatingButton.style.left = '50%';
+      floatingButton.style.top = '50%';
+      floatingButton.style.transform = 'translate(-50%, -50%)';
+      floatingButton.style.display = 'block';
+      floatingButton.style.zIndex = '999999';
+      floatingButton.style.position = 'fixed';
+      floatingButton.style.backgroundColor = '#EF4444'; // 빨간색으로 변경하여 눈에 띄게
+      
+      selectedText = testAddress;
+      
+      console.log('🔘 Button forced to center with address:', testAddress);
+      return testAddress;
+    },
+    showButtonForSelection: () => {
+      console.log('📝 Trying to show button for current selection...');
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim()) {
+        handleTextSelection('manual-debug');
+        return selection.toString().trim();
+      } else {
+        console.log('❌ No text currently selected');
+        return null;
+      }
+    },
+    hideButton: () => {
+      console.log('🙈 Hiding button...');
+      floatingButton.style.display = 'none';
+      popupBox.style.display = 'none';
+    }
+  };
+  
+  console.log('🛠️ Debug functions available:');
+  console.log('- window.noditDebug.checkStatus() - Check extension status');
+  console.log('- window.noditDebug.testAddress(address) - Test address validity');
+  console.log('- window.noditDebug.forceEnable() - Force enable extension');
+  console.log('- window.noditDebug.showButtonAtCenter(address?) - Show button at screen center');
+  console.log('- window.noditDebug.showButtonForSelection() - Show button for current selection');
+  console.log('- window.noditDebug.hideButton() - Hide button and popup');
 };
 
 // Initialize immediately
@@ -1262,14 +1533,25 @@ initializeContentScript();
 
 // Listen for storage changes (다른 탭에서 설정 변경 시 동기화)
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.isEnabled) {
-    console.log('Extension state changed:', changes.isEnabled);
-    isEnabled = changes.isEnabled.newValue ?? false;
+  if (area === 'local') {
+    console.log('📦 Storage changed in content script:', changes);
     
-    // 상태가 비활성화되면 UI 숨김
-    if (!isEnabled && floatingButton && popupBox) {
-      floatingButton.style.display = 'none';
-      popupBox.style.display = 'none';
+    if (changes.isEnabled) {
+      console.log('Extension state changed:', changes.isEnabled);
+      isEnabled = changes.isEnabled.newValue ?? false;
+      
+      // 상태가 비활성화되면 UI 숨김
+      if (!isEnabled && floatingButton && popupBox) {
+        floatingButton.style.display = 'none';
+        popupBox.style.display = 'none';
+      }
+      
+      console.log(`🔄 Extension ${isEnabled ? 'ENABLED' : 'DISABLED'} via storage sync`);
+    }
+    
+    if (changes.isTransactionCheckerEnabled) {
+      console.log('Transaction checker state changed:', changes.isTransactionCheckerEnabled);
+      // Transaction checker 상태 변경 처리 (필요시 추가 로직 구현)
     }
   }
 });
@@ -1394,5 +1676,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     
     return true; // Will respond asynchronously
+  }
+
+  if (message.type === 'TOGGLE_TRANSACTION_CHECKER') {
+    console.log('TOGGLE_TRANSACTION_CHECKER received:', message.isEnabled);
+    // Transaction checker 상태 처리 (필요시 추가 로직 구현)
+  }
+
+  if (message.type === 'STATE_SYNC_RESPONSE') {
+    console.log('STATE_SYNC_RESPONSE received:', message.state);
+    // Background script에서 받은 최신 상태로 업데이트
+    if (message.state) {
+      isEnabled = message.state.isEnabled ?? false;
+      console.log('🔄 State synchronized from background:', message.state);
+      
+      // 상태가 비활성화되면 UI 숨김
+      if (!isEnabled && floatingButton && popupBox) {
+        floatingButton.style.display = 'none';
+        popupBox.style.display = 'none';
+      }
+    }
   }
 });

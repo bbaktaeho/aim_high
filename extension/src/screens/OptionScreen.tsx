@@ -57,35 +57,21 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
   const handleToggle = async () => {
     const newState = !isEnabled;
     setIsEnabled(newState);
+    
+    // Storage에 저장하면 background script가 자동으로 모든 탭에 브로드캐스트
     await chrome.storage.local.set({ isEnabled: newState });
-
-    // 모든 탭에 상태 변경 알림 (현재 탭뿐만 아니라 모든 탭)
-    try {
-      const tabs = await chrome.tabs.query({});
-      
-      for (const tab of tabs) {
-        if (tab.id && tab.url?.startsWith('http')) {
-          try {
-            await chrome.tabs.sendMessage(tab.id, { 
-              type: 'TOGGLE_EXTENSION', 
-              isEnabled: newState 
-            });
-          } catch (err) {
-            // Content script가 없는 탭은 무시
-            console.log(`Content script not available in tab ${tab.id}`);
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Error broadcasting toggle state:', error);
-    }
+    console.log(`🔄 Extension state changed to: ${newState}`);
   };
 
   const handleTransactionCheckerToggle = async () => {
     const newState = !isTransactionCheckerEnabled;
     setIsTransactionCheckerEnabled(newState);
-    await chrome.storage.local.set({ isTransactionCheckerEnabled: newState });
     
+    // Storage에 저장하면 background script가 자동으로 모든 탭에 브로드캐스트
+    await chrome.storage.local.set({ isTransactionCheckerEnabled: newState });
+    console.log(`🔄 Transaction checker state changed to: ${newState}`);
+    
+    // 현재 탭에서만 스크립트 주입/제거 처리
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const currentTab = tabs[0];
@@ -117,7 +103,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
         }
       }
     } catch (error) {
-      console.error('Error toggling transaction checker:', error);
+      console.error('Error handling transaction checker script:', error);
     }
   };
 

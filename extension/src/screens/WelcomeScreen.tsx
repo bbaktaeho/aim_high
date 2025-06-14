@@ -14,7 +14,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
     setIsLoading(true);
     
     await new Promise(resolve => setTimeout(resolve, 2000));
-    await chrome.storage.local.set({ apiKey });
+    await chrome.storage.local.set({ noditApiKey: apiKey });
     onSubmit(apiKey);
   };
 

@@ -267,9 +267,9 @@ const Popup: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<'welcome' | 'main' | 'options'>('welcome');
 
   useEffect(() => {
-    chrome.storage.local.get(['apiKey'], (result) => {
-      setIsConnected(!!result.apiKey);
-      if (result.apiKey) {
+    chrome.storage.local.get(['noditApiKey'], (result) => {
+      setIsConnected(!!result.noditApiKey);
+      if (result.noditApiKey) {
         setCurrentScreen('main');
       }
     });
