@@ -7,6 +7,7 @@ module.exports = {
   entry: {
     popup: "./src/popup.tsx",
     content: "./src/content.tsx",
+    "metamask-content": "./src/metamask-content.tsx",
     background: "./src/background.ts",
     "page-script": "./src/page-script.ts",
     transaction: "./src/transaction.tsx",

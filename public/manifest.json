@@ -17,6 +17,12 @@
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["metamask-content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "content_security_policy": {

@@ -1186,18 +1186,8 @@ const initializeContentScript = () => {
     console.log('Failed to request state sync from background');
   });
   
-  // Inject page script
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('page-script.js');
-  script.onload = () => {
-    console.log('Page script loaded');
-    script.remove();
-    isInitialized = true;
-  };
-  script.onerror = (error) => {
-    console.error('Failed to load page script:', error);
-  };
-  (document.head || document.documentElement).appendChild(script);
+  // Mark as initialized (page script is now handled by metamask-content.tsx)
+  isInitialized = true;
 
   // Create and append UI elements
   floatingButton = createFloatingButton();
@@ -1580,45 +1570,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-// Helper function to send message to page script
-const sendMessageToPage = (action: string): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    try {
-      const messageId = Date.now().toString();
-      
-      // Set up message listener
-      const messageHandler = (event: MessageEvent) => {
-        if (event.data?.type === 'FROM_PAGE' && event.data.messageId === messageId) {
-          window.removeEventListener('message', messageHandler);
-          
-          if (event.data.success) {
-            resolve(event.data.data);
-          } else {
-            reject(new Error(event.data.error.message));
-          }
-        }
-      };
-      
-      // Add timeout
-      const timeout = setTimeout(() => {
-        window.removeEventListener('message', messageHandler);
-        reject(new Error('Message timeout'));
-      }, 10000); // 10 second timeout
-      
-      window.addEventListener('message', messageHandler);
-      
-      // Send message to page
-      window.postMessage({
-        type: 'FROM_CONTENT_SCRIPT',
-        messageId,
-        action
-      }, '*');
-      
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
+// Note: MetaMask-related messaging is now handled by metamask-content.tsx
 
 // Listen for messages from popup and background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -1639,68 +1591,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
-  if (message.type === 'GET_METAMASK_INFO') {
-    console.log('GET_METAMASK_INFO received');
-    
-    sendMessageToPage('GET_METAMASK_INFO')
-      .then(ethereumInfo => {
-        console.log('Received ethereum info:', ethereumInfo);
-        sendResponse({
-          type: 'METAMASK_INFO',
-          data: ethereumInfo
-        });
-      })
-      .catch(error => {
-        console.error('Error getting MetaMask info:', error);
-        sendResponse({
-          type: 'METAMASK_INFO',
-          data: null
-        });
-      });
-    
-    return true; // Will respond asynchronously
-  }
-
-  if (message.type === 'REQUEST_ACCOUNTS') {
-    console.log('REQUEST_ACCOUNTS received');
-    
-    sendMessageToPage('REQUEST_ACCOUNTS')
-      .then(accounts => {
-        console.log('Accounts received:', accounts);
-        sendResponse({
-          type: 'ACCOUNTS_RESULT',
-          data: accounts
-        });
-      })
-      .catch(error => {
-        console.error('Error requesting accounts:', error);
-        sendResponse({
-          type: 'ACCOUNTS_ERROR',
-          error: {
-            code: error.code,
-            message: error.message
-          }
-        });
-      });
-    
-    return true; // Will respond asynchronously
-  }
-
-  if (message.type === 'DISCONNECT_WALLET') {
-    console.log('DISCONNECT_WALLET received');
-    
-    sendMessageToPage('DISCONNECT_WALLET')
-      .then(() => {
-        console.log('Wallet disconnected');
-        sendResponse({ type: 'DISCONNECTED' });
-      })
-      .catch(error => {
-        console.error('Error disconnecting wallet:', error);
-        sendResponse({ type: 'DISCONNECTED' }); // Still send success even if there's an error
-      });
-    
-    return true; // Will respond asynchronously
-  }
+  // MetaMask-related messages are now handled by metamask-content.tsx
+  // GET_METAMASK_INFO, REQUEST_ACCOUNTS, DISCONNECT_WALLET
 
   if (message.type === 'TOGGLE_TRANSACTION_CHECKER') {
     console.log('TOGGLE_TRANSACTION_CHECKER received:', message.isEnabled);

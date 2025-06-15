@@ -21,31 +21,31 @@ export const useMetaMask = () => {
     isRequestPending: false,
   });
 
-  // Check if content script is ready
-  const checkContentScriptReady = useCallback(async (tabId: number): Promise<boolean> => {
+  // Check if MetaMask content script is ready
+  const checkMetaMaskContentScriptReady = useCallback(async (tabId: number): Promise<boolean> => {
     try {
-      console.log("🔍 Checking content script readiness...");
-      const response = await chrome.tabs.sendMessage(tabId, { type: "PING" });
-      console.log("📡 Content script ping response:", response);
-      return response?.type === "PONG" && response?.initialized === true;
+      console.log("🔍 Checking MetaMask content script readiness...");
+      const response = await chrome.tabs.sendMessage(tabId, { type: "METAMASK_PING" });
+      console.log("📡 MetaMask content script ping response:", response);
+      return response?.type === "METAMASK_PONG" && response?.initialized === true;
     } catch (err) {
-      console.error("❌ Error checking content script:", err);
+      console.error("❌ Error checking MetaMask content script:", err);
       return false;
     }
   }, []);
 
-  // Inject content script if not ready
-  const injectContentScript = useCallback(async (tabId: number) => {
+  // Inject MetaMask content script if not ready
+  const injectMetaMaskContentScript = useCallback(async (tabId: number) => {
     try {
-      console.log("💉 Injecting content script...");
+      console.log("💉 Injecting MetaMask content script...");
       await chrome.scripting.executeScript({
         target: { tabId },
-        files: ["content.js"],
+        files: ["metamask-content.js"],
       });
-      console.log("✅ Content script injected");
+      console.log("✅ MetaMask content script injected");
       return true;
     } catch (err) {
-      console.error("❌ Error injecting content script:", err);
+      console.error("❌ Error injecting MetaMask content script:", err);
       return false;
     }
   }, []);
@@ -79,16 +79,16 @@ export const useMetaMask = () => {
         return;
       }
 
-      // Check if content script is ready
-      let isReady = await checkContentScriptReady(currentTab.id);
+      // Check if MetaMask content script is ready
+      let isReady = await checkMetaMaskContentScriptReady(currentTab.id);
 
       // If not ready, try to inject it
       if (!isReady) {
-        console.log("⚠️ Content script not ready, attempting to inject...");
-        const injected = await injectContentScript(currentTab.id);
+        console.log("⚠️ MetaMask content script not ready, attempting to inject...");
+        const injected = await injectMetaMaskContentScript(currentTab.id);
         if (injected) {
           await new Promise((resolve) => setTimeout(resolve, 500));
-          isReady = await checkContentScriptReady(currentTab.id);
+          isReady = await checkMetaMaskContentScriptReady(currentTab.id);
         }
       }
 
@@ -117,7 +117,9 @@ export const useMetaMask = () => {
           setState((prev) => ({ ...prev, isMetaMaskInstalled: ethereumInfo.isMetaMask }));
 
           if (ethereumInfo.isMetaMask) {
+            // Check if MetaMask is already connected (has selectedAddress)
             if (ethereumInfo.selectedAddress) {
+              console.log("🔗 MetaMask already connected, restoring connection:", ethereumInfo.selectedAddress);
               const chainIdNum = ethereumInfo.chainId ? parseInt(ethereumInfo.chainId, 16) : null;
 
               setState((prev) => ({
@@ -126,9 +128,12 @@ export const useMetaMask = () => {
                 chainId: chainIdNum,
               }));
 
-              console.log("✅ Account already connected:", ethereumInfo.selectedAddress, "Chain ID:", chainIdNum);
+              console.log("✅ Connection restored:", {
+                account: ethereumInfo.selectedAddress,
+                chainId: chainIdNum,
+              });
             } else {
-              console.log("⚪ MetaMask installed but no account connected");
+              console.log("🦊 MetaMask detected but not connected, ready for user connection");
             }
           } else {
             setState((prev) => ({ ...prev, error: "MetaMask is not installed" }));
@@ -143,7 +148,7 @@ export const useMetaMask = () => {
     }
 
     console.log("🏁 [useMetaMask] Initialize MetaMask completed");
-  }, [checkContentScriptReady, injectContentScript]);
+  }, [checkMetaMaskContentScriptReady, injectMetaMaskContentScript]);
 
   // Connect wallet
   const connectWallet = useCallback(async () => {
@@ -182,8 +187,8 @@ export const useMetaMask = () => {
       // Clear disconnected flag when connecting
       await chrome.storage.local.remove(["walletDisconnected"]);
 
-      // Always request fresh connection to get latest account and chain info
-      console.log("🔄 Requesting fresh MetaMask connection...");
+      // Request user approval for connection
+      console.log("🔄 Requesting MetaMask connection approval...");
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         type: "REQUEST_ACCOUNTS",
       });
@@ -192,20 +197,33 @@ export const useMetaMask = () => {
       if (response.type === "ACCOUNTS_RESULT") {
         const accounts = response.data;
         if (accounts && accounts.length > 0) {
-          // Get updated info
-          const updatedInfoResponse = await chrome.tabs.sendMessage(currentTab.id, {
+          // After successful approval, get fresh account and chain info
+          const infoResponse = await chrome.tabs.sendMessage(currentTab.id, {
             type: "GET_METAMASK_INFO",
           });
 
-          if (updatedInfoResponse.type === "METAMASK_INFO" && updatedInfoResponse.data?.chainId) {
-            const chainIdNum = parseInt(updatedInfoResponse.data.chainId, 16);
+          if (infoResponse.type === "METAMASK_INFO" && infoResponse.data) {
+            const ethereumInfo = infoResponse.data;
+            const chainIdNum = ethereumInfo.chainId ? parseInt(ethereumInfo.chainId, 16) : null;
+
             setState((prev) => ({
               ...prev,
-              account: accounts[0],
+              account: ethereumInfo.selectedAddress || accounts[0],
               chainId: chainIdNum,
             }));
 
-            console.log("✅ Account connected successfully:", accounts[0], "Chain ID:", chainIdNum);
+            console.log("✅ Connection approved and account info updated:", {
+              account: ethereumInfo.selectedAddress || accounts[0],
+              chainId: chainIdNum,
+            });
+          } else {
+            // Fallback if info request fails
+            setState((prev) => ({
+              ...prev,
+              account: accounts[0],
+              chainId: null,
+            }));
+            console.log("✅ Connection approved (fallback):", accounts[0]);
           }
         } else {
           setState((prev) => ({ ...prev, error: "No accounts found" }));
@@ -215,14 +233,15 @@ export const useMetaMask = () => {
         let errorMessage = "Failed to connect to MetaMask";
 
         if (err.code === 4001) {
-          errorMessage = "Please connect to MetaMask";
+          errorMessage = "User rejected the connection request";
         } else if (err.code === -32002) {
-          errorMessage = "Please check MetaMask popup";
+          errorMessage = "Connection request already pending. Please check MetaMask popup.";
         } else if (err.message) {
           errorMessage = err.message;
         }
 
         setState((prev) => ({ ...prev, error: errorMessage }));
+        console.log("❌ Connection rejected or failed:", errorMessage);
       }
     } catch (err: any) {
       console.error("❌ MetaMask connection error:", err);

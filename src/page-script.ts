@@ -44,47 +44,32 @@ async function getMetaMaskInfo() {
     return freshInfo;
   } catch (error) {
     console.error("❌ Error getting fresh MetaMask info:", error);
-    // Fallback to cached data if fresh data fails
+    // Return basic info without account details if there's an error
     return {
       isMetaMask: ethereum.isMetaMask ?? false,
       networkVersion: ethereum.networkVersion,
-      selectedAddress: ethereum.selectedAddress,
-      chainId: ethereum.chainId,
+      selectedAddress: null, // Don't return cached address on error
+      chainId: null, // Don't return cached chainId on error
       isConnected: ethereum.isConnected(),
     };
   }
 }
 
-// Function to request accounts and get fresh info
+// Function to request user approval and get accounts
 async function requestAccounts() {
   if (!window.ethereum) {
     throw new Error("MetaMask not found");
   }
 
-  // Request accounts first
+  console.log("🔐 Requesting user approval for account access...");
+
+  // This will show MetaMask popup for user approval
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
 
-  // Force refresh current account and chain info
-  const [currentAccounts, currentChainId] = await Promise.all([
-    window.ethereum.request({ method: "eth_accounts" }),
-    window.ethereum.request({ method: "eth_chainId" }),
-  ]);
+  console.log("✅ User approved account access:", accounts);
 
-  console.log("🔄 Fresh MetaMask data:", {
-    requestedAccounts: accounts,
-    currentAccounts,
-    currentChainId,
-  });
-
-  // Update ethereum object with fresh data
-  if (window.ethereum.selectedAddress !== currentAccounts[0]) {
-    console.log("📝 Updating selectedAddress:", window.ethereum.selectedAddress, "->", currentAccounts[0]);
-  }
-  if (window.ethereum.chainId !== currentChainId) {
-    console.log("📝 Updating chainId:", window.ethereum.chainId, "->", currentChainId);
-  }
-
-  return currentAccounts;
+  // Return the approved accounts
+  return accounts;
 }
 
 // Function to disconnect wallet
