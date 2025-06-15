@@ -182,26 +182,8 @@ export const useMetaMask = () => {
       // Clear disconnected flag when connecting
       await chrome.storage.local.remove(["walletDisconnected"]);
 
-      // Check if already connected
-      const infoResponse = await chrome.tabs.sendMessage(currentTab.id, {
-        type: "GET_METAMASK_INFO",
-      });
-
-      if (infoResponse.type === "METAMASK_INFO" && infoResponse.data?.selectedAddress) {
-        const chainIdNum = infoResponse.data.chainId ? parseInt(infoResponse.data.chainId, 16) : null;
-
-        setState((prev) => ({
-          ...prev,
-          account: infoResponse.data.selectedAddress,
-          chainId: chainIdNum,
-          isConnecting: false,
-        }));
-
-        console.log("✅ Account already connected:", infoResponse.data.selectedAddress, "Chain ID:", chainIdNum);
-        return;
-      }
-
-      // Request connection
+      // Always request fresh connection to get latest account and chain info
+      console.log("🔄 Requesting fresh MetaMask connection...");
       const response = await chrome.tabs.sendMessage(currentTab.id, {
         type: "REQUEST_ACCOUNTS",
       });

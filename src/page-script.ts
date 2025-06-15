@@ -20,23 +20,71 @@ declare global {
   }
 }
 
-// Function to get MetaMask info
-function getMetaMaskInfo() {
+// Function to get MetaMask info with fresh data
+async function getMetaMaskInfo() {
   const ethereum = window.ethereum;
   if (!ethereum) return null;
 
-  return {
-    isMetaMask: ethereum.isMetaMask ?? false,
-    networkVersion: ethereum.networkVersion,
-    selectedAddress: ethereum.selectedAddress,
-    chainId: ethereum.chainId,
-    isConnected: ethereum.isConnected(),
-  };
+  try {
+    // Get fresh account and chain data
+    const [accounts, chainId] = await Promise.all([
+      ethereum.request({ method: "eth_accounts" }),
+      ethereum.request({ method: "eth_chainId" }),
+    ]);
+
+    const freshInfo = {
+      isMetaMask: ethereum.isMetaMask ?? false,
+      networkVersion: ethereum.networkVersion,
+      selectedAddress: accounts && accounts.length > 0 ? accounts[0] : null,
+      chainId: chainId,
+      isConnected: ethereum.isConnected(),
+    };
+
+    console.log("🔄 Fresh MetaMask info:", freshInfo);
+    return freshInfo;
+  } catch (error) {
+    console.error("❌ Error getting fresh MetaMask info:", error);
+    // Fallback to cached data if fresh data fails
+    return {
+      isMetaMask: ethereum.isMetaMask ?? false,
+      networkVersion: ethereum.networkVersion,
+      selectedAddress: ethereum.selectedAddress,
+      chainId: ethereum.chainId,
+      isConnected: ethereum.isConnected(),
+    };
+  }
 }
 
-// Function to request accounts
+// Function to request accounts and get fresh info
 async function requestAccounts() {
-  return window.ethereum?.request({ method: "eth_requestAccounts" });
+  if (!window.ethereum) {
+    throw new Error("MetaMask not found");
+  }
+
+  // Request accounts first
+  const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+
+  // Force refresh current account and chain info
+  const [currentAccounts, currentChainId] = await Promise.all([
+    window.ethereum.request({ method: "eth_accounts" }),
+    window.ethereum.request({ method: "eth_chainId" }),
+  ]);
+
+  console.log("🔄 Fresh MetaMask data:", {
+    requestedAccounts: accounts,
+    currentAccounts,
+    currentChainId,
+  });
+
+  // Update ethereum object with fresh data
+  if (window.ethereum.selectedAddress !== currentAccounts[0]) {
+    console.log("📝 Updating selectedAddress:", window.ethereum.selectedAddress, "->", currentAccounts[0]);
+  }
+  if (window.ethereum.chainId !== currentChainId) {
+    console.log("📝 Updating chainId:", window.ethereum.chainId, "->", currentChainId);
+  }
+
+  return currentAccounts;
 }
 
 // Function to disconnect wallet
@@ -60,7 +108,7 @@ window.addEventListener("message", async (event) => {
     let result;
     switch (event.data.action) {
       case "GET_METAMASK_INFO":
-        result = getMetaMaskInfo();
+        result = await getMetaMaskInfo();
         break;
       case "REQUEST_ACCOUNTS":
         result = await requestAccounts();
