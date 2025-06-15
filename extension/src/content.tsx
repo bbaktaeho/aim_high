@@ -31,8 +31,8 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
     `;
 
     // Get API key from storage
-    const result = await chrome.storage.local.get(['apiKey']);
-    const apiKey = result.apiKey;
+    const result = await chrome.storage.local.get(['noditApiKey']);
+    const apiKey = result.noditApiKey;
     
     if (!apiKey) {
       contentDiv.innerHTML = `
@@ -845,6 +845,8 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
   const loadMoreButtons = contentDiv.querySelectorAll('.load-more-tokens-btn');
   loadMoreButtons.forEach(button => {
     button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const btn = event.target as HTMLButtonElement;
       const address = btn.getAttribute('data-address')!;
       const protocol = btn.getAttribute('data-protocol')!;
@@ -859,6 +861,8 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
   const loadMoreAssetButtons = contentDiv.querySelectorAll('.load-more-assets-btn');
   loadMoreAssetButtons.forEach(button => {
     button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const btn = event.target as HTMLButtonElement;
       const address = btn.getAttribute('data-address')!;
       const protocol = btn.getAttribute('data-protocol')!;
@@ -926,8 +930,8 @@ const renderAssetItems = (assets: any[], startIndex: number = 0) => {
 const handleLoadMoreTokens = async (address: string, protocol: string, network: string, networkKey: string, button: HTMLButtonElement) => {
   try {
     // Get API key from storage
-    const result = await chrome.storage.local.get(['apiKey']);
-    const apiKey = result.apiKey;
+    const result = await chrome.storage.local.get(['noditApiKey']);
+    const apiKey = result.noditApiKey;
     
     if (!apiKey) {
       console.error('API key not found');
@@ -992,8 +996,8 @@ const handleLoadMoreTokens = async (address: string, protocol: string, network: 
 const handleLoadMoreAssets = async (address: string, protocol: string, network: string, networkKey: string, button: HTMLButtonElement) => {
   try {
     // Get API key from storage
-    const result = await chrome.storage.local.get(['apiKey']);
-    const apiKey = result.apiKey;
+    const result = await chrome.storage.local.get(['noditApiKey']);
+    const apiKey = result.noditApiKey;
     
     if (!apiKey) {
       console.error('API key not found');
@@ -1142,6 +1146,19 @@ const createPopupBox = () => {
   Object.assign(contentDiv.style, styles.popupContent);
   container.appendChild(contentDiv);
   
+  // 팝업 내부 클릭 시 이벤트 전파 방지 (floating button이 나타나지 않도록)
+  container.addEventListener('mouseup', (event) => {
+    event.stopPropagation();
+  });
+  
+  container.addEventListener('mousedown', (event) => {
+    event.stopPropagation();
+  });
+  
+  container.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  
   // 분석 버튼은 제거 - 바로 분석 결과를 표시
   return { container, contentDiv };
 };
@@ -1199,6 +1216,13 @@ const initializeContentScript = () => {
       console.log('❌ Extension is disabled');
       floatingButton.style.display = 'none';
       popupBox.style.display = 'none';
+      return;
+    }
+    
+    // 팝업이 이미 열려있으면 floating button을 표시하지 않음
+    if (popupBox.style.display === 'block') {
+      console.log('❌ Popup is already open, not showing floating button');
+      floatingButton.style.display = 'none';
       return;
     }
     
