@@ -1,7 +1,11 @@
 // This script runs in the context of the webpage
+// Export to make this file a module (required for global declarations)
+export {};
+
 declare global {
   interface Window {
     __transactionCheckerInjected?: boolean;
+    __pageScriptInjected?: boolean;
     ethereum?: {
       isMetaMask?: boolean;
       networkVersion?: string;
@@ -17,7 +21,7 @@ declare global {
 }
 
 // Function to get MetaMask info
-export function getMetaMaskInfo() {
+function getMetaMaskInfo() {
   const ethereum = window.ethereum;
   if (!ethereum) return null;
 
@@ -31,12 +35,12 @@ export function getMetaMaskInfo() {
 }
 
 // Function to request accounts
-export async function requestAccounts() {
+async function requestAccounts() {
   return window.ethereum?.request({ method: "eth_requestAccounts" });
 }
 
 // Function to disconnect wallet
-export function disconnectWallet() {
+function disconnectWallet() {
   if (window.ethereum?.removeAllListeners) {
     window.ethereum.removeAllListeners("accountsChanged");
     window.ethereum.removeAllListeners("chainChanged");
@@ -96,19 +100,19 @@ window.addEventListener("message", async (event) => {
 // Transaction Checker: eth_sendTransaction 후킹
 (function () {
   console.log("Transaction Checker: script injected");
-  if ((window as any).__transactionCheckerInjected) return;
-  (window as any).__transactionCheckerInjected = true;
+  if (window.__transactionCheckerInjected) return;
+  window.__transactionCheckerInjected = true;
   if (!window.ethereum || !window.ethereum.request) return;
-  // @ts-ignore
+
   const originalRequest = window.ethereum.request;
-  // @ts-ignore
+
   window.ethereum.request = async function (...args) {
     console.log("Transaction Checker: received", args);
     const [payload] = args;
     if (payload.method === "eth_sendTransaction") {
       console.log("🚀 트랜잭션 요청:", payload);
-      // @ts-ignore
-      const chainId = await originalRequest({
+
+      const chainId = await originalRequest.call(this, {
         method: "eth_chainId",
         params: [],
       });

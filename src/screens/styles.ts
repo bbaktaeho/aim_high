@@ -83,6 +83,30 @@ export const styles = {
     fontWeight: "500",
     color: "#374151",
   },
+  // API Key 도움말 링크 스타일들
+  helpLinkContainer: {
+    textAlign: "center" as const,
+    marginTop: "16px",
+    padding: "12px 0",
+  },
+  helpText: {
+    fontSize: "13px",
+    color: "#6B7280",
+  },
+  helpLink: {
+    fontSize: "13px",
+    color: "#10B981",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    textDecoration: "underline",
+    padding: "0",
+    fontFamily: "inherit",
+    transition: "color 0.2s ease",
+    "&:hover": {
+      color: "#059669",
+    },
+  },
   toggleContainer: {
     display: "flex",
     alignItems: "center",
