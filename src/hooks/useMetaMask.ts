@@ -117,24 +117,9 @@ export const useMetaMask = () => {
           setState((prev) => ({ ...prev, isMetaMaskInstalled: ethereumInfo.isMetaMask }));
 
           if (ethereumInfo.isMetaMask) {
-            // Check if MetaMask is already connected (has selectedAddress)
-            if (ethereumInfo.selectedAddress) {
-              console.log("🔗 MetaMask already connected, restoring connection:", ethereumInfo.selectedAddress);
-              const chainIdNum = ethereumInfo.chainId ? parseInt(ethereumInfo.chainId, 16) : null;
-
-              setState((prev) => ({
-                ...prev,
-                account: ethereumInfo.selectedAddress,
-                chainId: chainIdNum,
-              }));
-
-              console.log("✅ Connection restored:", {
-                account: ethereumInfo.selectedAddress,
-                chainId: chainIdNum,
-              });
-            } else {
-              console.log("🦊 MetaMask detected but not connected, ready for user connection");
-            }
+            console.log("🦊 MetaMask detected, ready for user connection");
+            // Don't auto-connect during initialization
+            // User must explicitly click Connect button
           } else {
             setState((prev) => ({ ...prev, error: "MetaMask is not installed" }));
           }
@@ -199,7 +184,7 @@ export const useMetaMask = () => {
         if (accounts && accounts.length > 0) {
           // After successful approval, get fresh account and chain info
           const infoResponse = await chrome.tabs.sendMessage(currentTab.id, {
-            type: "GET_METAMASK_INFO",
+            type: "GET_METAMASK_INFO_WITH_ACCOUNTS",
           });
 
           if (infoResponse.type === "METAMASK_INFO" && infoResponse.data) {

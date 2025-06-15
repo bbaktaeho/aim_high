@@ -20,8 +20,37 @@ declare global {
   }
 }
 
-// Function to get MetaMask info with fresh data
+// Function to get MetaMask basic info (without account access)
 async function getMetaMaskInfo() {
+  const ethereum = window.ethereum;
+  if (!ethereum) return null;
+
+  try {
+    // Only get basic MetaMask info, no account access
+    const basicInfo = {
+      isMetaMask: ethereum.isMetaMask ?? false,
+      networkVersion: ethereum.networkVersion,
+      selectedAddress: null, // Don't expose account info in basic check
+      chainId: null, // Don't expose chain info in basic check
+      isConnected: ethereum.isConnected(),
+    };
+
+    console.log("🔄 Basic MetaMask info (no account access):", basicInfo);
+    return basicInfo;
+  } catch (error) {
+    console.error("❌ Error getting basic MetaMask info:", error);
+    return {
+      isMetaMask: ethereum.isMetaMask ?? false,
+      networkVersion: ethereum.networkVersion,
+      selectedAddress: null,
+      chainId: null,
+      isConnected: ethereum.isConnected(),
+    };
+  }
+}
+
+// Function to get MetaMask info with account data (after connection)
+async function getMetaMaskInfoWithAccounts() {
   const ethereum = window.ethereum;
   if (!ethereum) return null;
 
@@ -32,7 +61,7 @@ async function getMetaMaskInfo() {
       ethereum.request({ method: "eth_chainId" }),
     ]);
 
-    const freshInfo = {
+    const fullInfo = {
       isMetaMask: ethereum.isMetaMask ?? false,
       networkVersion: ethereum.networkVersion,
       selectedAddress: accounts && accounts.length > 0 ? accounts[0] : null,
@@ -40,16 +69,15 @@ async function getMetaMaskInfo() {
       isConnected: ethereum.isConnected(),
     };
 
-    console.log("🔄 Fresh MetaMask info:", freshInfo);
-    return freshInfo;
+    console.log("🔄 Full MetaMask info with accounts:", fullInfo);
+    return fullInfo;
   } catch (error) {
-    console.error("❌ Error getting fresh MetaMask info:", error);
-    // Return basic info without account details if there's an error
+    console.error("❌ Error getting full MetaMask info:", error);
     return {
       isMetaMask: ethereum.isMetaMask ?? false,
       networkVersion: ethereum.networkVersion,
-      selectedAddress: null, // Don't return cached address on error
-      chainId: null, // Don't return cached chainId on error
+      selectedAddress: null,
+      chainId: null,
       isConnected: ethereum.isConnected(),
     };
   }
@@ -94,6 +122,9 @@ window.addEventListener("message", async (event) => {
     switch (event.data.action) {
       case "GET_METAMASK_INFO":
         result = await getMetaMaskInfo();
+        break;
+      case "GET_METAMASK_INFO_WITH_ACCOUNTS":
+        result = await getMetaMaskInfoWithAccounts();
         break;
       case "REQUEST_ACCOUNTS":
         result = await requestAccounts();

@@ -79,7 +79,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     sendMessageToPage('GET_METAMASK_INFO')
       .then(ethereumInfo => {
-        console.log('🦊 Received ethereum info:', ethereumInfo);
+        console.log('🦊 Received basic ethereum info:', ethereumInfo);
         sendResponse({
           type: 'METAMASK_INFO',
           data: ethereumInfo
@@ -87,6 +87,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch(error => {
         console.error('❌ Error getting MetaMask info:', error);
+        sendResponse({
+          type: 'METAMASK_INFO',
+          data: null
+        });
+      });
+    
+    return true; // Will respond asynchronously
+  }
+
+  if (message.type === 'GET_METAMASK_INFO_WITH_ACCOUNTS') {
+    console.log('🦊 GET_METAMASK_INFO_WITH_ACCOUNTS received');
+    
+    sendMessageToPage('GET_METAMASK_INFO_WITH_ACCOUNTS')
+      .then(ethereumInfo => {
+        console.log('🦊 Received full ethereum info with accounts:', ethereumInfo);
+        sendResponse({
+          type: 'METAMASK_INFO',
+          data: ethereumInfo
+        });
+      })
+      .catch(error => {
+        console.error('❌ Error getting MetaMask info with accounts:', error);
         sendResponse({
           type: 'METAMASK_INFO',
           data: null
