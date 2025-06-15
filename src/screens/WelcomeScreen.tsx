@@ -32,7 +32,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
       </div>
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.inputContainer}>
-          <label style={styles.label}>Nodit Minion API 키 입력</label>
+          <label style={styles.label}>Nodit API 키 입력</label>
           <input
             type="password"
             value={apiKey}
