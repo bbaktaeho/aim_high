@@ -1093,7 +1093,7 @@ const styles = {
     border: '2px solid #10B981',
     borderRadius: '12px',
     boxShadow: '0 10px 25px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.1)',
-    zIndex: 10001,
+    zIndex: 2147483647, // Maximum z-index value
     maxWidth: '500px',
     minWidth: '380px',
     maxHeight: '500px',
@@ -1104,6 +1104,16 @@ const styles = {
     boxSizing: 'border-box',
     overflowY: 'auto',
     backdropFilter: 'blur(10px)',
+    // CSS 격리를 위한 추가 속성들
+    isolation: 'isolate',
+    contain: 'layout style paint',
+    pointerEvents: 'auto',
+    // 모든 CSS 속성을 명시적으로 설정하여 사이트 CSS의 영향을 최소화
+    margin: '0',
+    transform: 'none',
+    filter: 'none',
+    opacity: '1',
+    visibility: 'visible',
   },
   popupContent: {
     padding: '20px',
@@ -1140,10 +1150,69 @@ const createFloatingButton = () => {
 // Create popup box element
 const createPopupBox = () => {
   const container = document.createElement('div');
+  
+  // 기본 스타일 적용
   Object.assign(container.style, styles.popupBox);
+  
+  // 추가적인 강제 스타일 적용 (사이트 CSS 오버라이드 방지)
+  container.style.cssText = `
+    position: fixed !important;
+    display: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background-color: #FFFFFF !important;
+    border: 2px solid #10B981 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.1) !important;
+    z-index: 2147483647 !important;
+    max-width: 500px !important;
+    min-width: 380px !important;
+    max-height: 500px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    color: #1A1A1A !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    backdrop-filter: blur(10px) !important;
+    isolation: isolate !important;
+    contain: layout style paint !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    height: auto !important;
+  `;
+  
+  // 고유한 ID 설정 (디버깅용)
+  container.id = 'nodit-analysis-popup';
+  container.setAttribute('data-nodit-popup', 'true');
   
   const contentDiv = document.createElement('div');
   Object.assign(contentDiv.style, styles.popupContent);
+  
+  // 콘텐츠 div에도 강제 스타일 적용
+  contentDiv.style.cssText = `
+    padding: 20px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    position: relative !important;
+    z-index: auto !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  `;
+  
   container.appendChild(contentDiv);
   
   // 팝업 내부 클릭 시 이벤트 전파 방지 (floating button이 나타나지 않도록)
@@ -1403,10 +1472,45 @@ const initializeContentScript = () => {
         top = rect.top + window.scrollY - popupHeight - 12;
       }
       
-      popupBox.style.left = `${left}px`;
-      popupBox.style.top = `${top}px`;
-      popupBox.style.display = 'block';
-      console.log('📦 Popup box displayed');
+      // 팝업 위치 설정 (강제 적용)
+      popupBox.style.setProperty('left', `${left}px`, 'important');
+      popupBox.style.setProperty('top', `${top}px`, 'important');
+      popupBox.style.setProperty('display', 'block', 'important');
+      popupBox.style.setProperty('visibility', 'visible', 'important');
+      popupBox.style.setProperty('opacity', '1', 'important');
+      popupBox.style.setProperty('z-index', '2147483647', 'important');
+      
+      console.log('📦 Popup box displayed at:', { left: `${left}px`, top: `${top}px` });
+      
+      // 팝업이 실제로 보이는지 확인
+      setTimeout(() => {
+        const popupRect = popupBox.getBoundingClientRect();
+        const isPopupVisible = popupRect.width > 0 && popupRect.height > 0 && 
+                              popupRect.top >= 0 && popupRect.left >= 0 &&
+                              popupRect.bottom <= window.innerHeight && 
+                              popupRect.right <= window.innerWidth;
+        
+        console.log('👁️ Popup visibility check:', {
+          popupRect,
+          isPopupVisible,
+          computedStyle: {
+            display: window.getComputedStyle(popupBox).display,
+            visibility: window.getComputedStyle(popupBox).visibility,
+            opacity: window.getComputedStyle(popupBox).opacity,
+            zIndex: window.getComputedStyle(popupBox).zIndex,
+            position: window.getComputedStyle(popupBox).position
+          }
+        });
+        
+        if (!isPopupVisible) {
+          console.warn('⚠️ Popup may not be visible! Attempting to fix...');
+          // 팝업이 보이지 않으면 화면 중앙에 강제 표시
+          popupBox.style.setProperty('left', '50%', 'important');
+          popupBox.style.setProperty('top', '50%', 'important');
+          popupBox.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+          console.log('🔧 Popup repositioned to center of screen');
+        }
+      }, 100);
       
       // 바로 계정 분석 실행
       await analyzeAccount(selectedText, popupContent);
@@ -1530,6 +1634,61 @@ const initializeContentScript = () => {
       console.log('🙈 Hiding button...');
       floatingButton.style.display = 'none';
       popupBox.style.display = 'none';
+    },
+    showPopupAtCenter: (address?: string) => {
+      console.log('🎯 Showing popup at center of screen...');
+      const testAddress = address || '0xbe45c4C29c7ed2E5107eD93556A6F9601D74d665';
+      
+      // 화면 중앙에 팝업 표시
+      popupBox.style.setProperty('left', '50%', 'important');
+      popupBox.style.setProperty('top', '50%', 'important');
+      popupBox.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+      popupBox.style.setProperty('display', 'block', 'important');
+      popupBox.style.setProperty('visibility', 'visible', 'important');
+      popupBox.style.setProperty('opacity', '1', 'important');
+      popupBox.style.setProperty('z-index', '2147483647', 'important');
+      
+      selectedText = testAddress;
+      
+      // 분석 실행
+      analyzeAccount(testAddress, popupContent);
+      
+      console.log('📦 Popup forced to center with address:', testAddress);
+      return testAddress;
+    },
+    testPopupVisibility: () => {
+      console.log('🔍 Testing popup visibility...');
+      const popupRect = popupBox.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(popupBox);
+      
+      const visibilityInfo = {
+        element: popupBox,
+        rect: popupRect,
+        isVisible: popupRect.width > 0 && popupRect.height > 0,
+        computedStyle: {
+          display: computedStyle.display,
+          visibility: computedStyle.visibility,
+          opacity: computedStyle.opacity,
+          zIndex: computedStyle.zIndex,
+          position: computedStyle.position,
+          left: computedStyle.left,
+          top: computedStyle.top,
+          transform: computedStyle.transform
+        },
+        inlineStyle: {
+          display: popupBox.style.display,
+          visibility: popupBox.style.visibility,
+          opacity: popupBox.style.opacity,
+          zIndex: popupBox.style.zIndex,
+          position: popupBox.style.position,
+          left: popupBox.style.left,
+          top: popupBox.style.top,
+          transform: popupBox.style.transform
+        }
+      };
+      
+      console.log('👁️ Popup visibility info:', visibilityInfo);
+      return visibilityInfo;
     }
   };
   
@@ -1540,6 +1699,8 @@ const initializeContentScript = () => {
   console.log('- window.noditDebug.showButtonAtCenter(address?) - Show button at screen center');
   console.log('- window.noditDebug.showButtonForSelection() - Show button for current selection');
   console.log('- window.noditDebug.hideButton() - Hide button and popup');
+  console.log('- window.noditDebug.showPopupAtCenter(address?) - Show popup at screen center');
+  console.log('- window.noditDebug.testPopupVisibility() - Test popup visibility and styling');
 };
 
 // Initialize immediately
