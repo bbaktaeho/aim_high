@@ -74,7 +74,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     
     // Storage에 저장하면 background script가 자동으로 모든 탭에 브로드캐스트
     await chrome.storage.local.set({ isTransactionCheckerEnabled: newState });
-    console.log(`🔄 Transaction checker state changed to: ${newState}`);
+    console.log(`🔄 Transaction Tracker state changed to: ${newState}`);
     
     // 현재 탭에서만 스크립트 주입/제거 처리
     try {
@@ -92,9 +92,9 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
             target: { tabId: currentTab.id },
             files: ['transaction-checker.js']
           });
-          console.log('Transaction checker script injected');
+          console.log('Transaction Tracker script injected');
         } catch (err) {
-          console.error('Failed to inject transaction checker script:', err);
+          console.error('Failed to inject transaction Tracker script:', err);
         }
       } else {
         // 트랜잭션 체커 비활성화: 정리 메시지 전송
@@ -102,13 +102,13 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
           await chrome.tabs.sendMessage(currentTab.id, { 
             type: 'CLEANUP_TRANSACTION_CHECKER'
           });
-          console.log('Transaction checker cleanup message sent');
+          console.log('Transaction Tracker cleanup message sent');
         } catch (err) {
-          console.log('Transaction checker script not active, cleanup skipped');
+          console.log('Transaction Tracker script not active, cleanup skipped');
         }
       }
     } catch (error) {
-      console.error('Error handling transaction checker script:', error);
+      console.error('Error handling transaction Tracker script:', error);
     }
   };
 
@@ -164,7 +164,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
           </label>
         </div>
         <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Transaction Checker</span>
+          <span style={styles.optionLabel}>Transaction Tracker</span>
           <label style={styles.toggleSwitch}>
             <input
               type="checkbox"
