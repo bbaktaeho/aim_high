@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CHAIN_CONFIG } from "./constants/chains";
 
@@ -17,9 +17,9 @@ function parseTxFromQuery() {
 const fieldLabel: Record<string, string> = {
   from: "From Address",
   to: "To Address", 
-  value: "Value (ETH)",
+  value: "Value (Wei)",
   gasPrice: "Gas Price (Gwei)",
-  data: "Input Data"
+  function: "Function"
 };
 
 // Wei를 ETH로 변환
@@ -85,13 +85,69 @@ const getTransactionType = (type: string): string => {
   return types[type] || `Type ${hexToDecimal(type)}`;
 };
 
+// 주소 타입 태그 컴포넌트
+const AddressTypeTag: React.FC<{ type: string }> = ({ type }) => {
+  const getTagStyle = (type: string) => {
+    const baseStyle = {
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: "12px",
+      fontSize: "10px",
+      fontWeight: "600",
+      textTransform: "uppercase" as const
+    };
+
+    switch (type) {
+      case "Contract":
+        return {
+          ...baseStyle,
+          background: "#FEF3C7",
+          color: "#92400E",
+          border: "1px solid #F59E0B"
+        };
+      case "Account":
+        return {
+          ...baseStyle,
+          background: "#DBEAFE",
+          color: "#1E40AF",
+          border: "1px solid #3B82F6"
+        };
+      case "Delegation":
+        return {
+          ...baseStyle,
+          background: "#F3E8FF",
+          color: "#7C3AED",
+          border: "1px solid #8B5CF6"
+        };
+      default:
+        return {
+          ...baseStyle,
+          background: "#F3F4F6",
+          color: "#6B7280",
+          border: "1px solid #9CA3AF"
+        };
+    }
+  };
+
+  return (
+    <span style={getTagStyle(type)}>
+      {type}
+    </span>
+  );
+};
+
 // 값 포맷팅 함수
-const formatValue = (key: string, value: any): string => {
+const formatValue = (key: string, value: any, functionSig?: string): string => {
+  // function 필드는 함수 시그니처 반환
+  if (key === "function") {
+    return functionSig || "Loading...";
+  }
+  
   if (!value || value === "0x" || value === "0x0") return "0";
   
   switch (key) {
     case "value":
-      return weiToEth(value);
+      return value; // Wei 단위 그대로 반환
     case "gasPrice":
     case "maxFeePerGas":
     case "maxPriorityFeePerGas":
@@ -103,14 +159,102 @@ const formatValue = (key: string, value: any): string => {
       return getNetworkName(value);
     case "type":
       return getTransactionType(value);
-    case "data":
-      if (value === "0x") return "No data";
-      return value.length > 42 ? `${value.substring(0, 42)}...` : value;
     case "from":
     case "to":
       return value || "N/A";
     default:
       return value?.toString() || "N/A";
+  }
+};
+
+// 함수 시그니처 조회
+const fetchFunctionSignature = async (hexSignature: string): Promise<string> => {
+  if (!hexSignature || hexSignature === "0x" || hexSignature.length < 10) {
+    return "No function";
+  }
+  
+  try {
+    const signature = hexSignature.substring(0, 10); // 앞 10자리 추출 (0x + 8자리)
+    const response = await fetch(`https://www.4byte.directory/api/v1/signatures/?format=json&hex_signature=${signature}`);
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      return data.results[0].text_signature;
+    }
+    
+    return `Unknown (${signature})`;
+  } catch (error) {
+    console.error('Error fetching function signature:', error);
+    return `Error (${hexSignature.substring(0, 10)})`;
+  }
+};
+
+
+
+// Nodit Node API - eth_getCode 조회
+const getContractCode = async (protocol: string, network: string, address: string): Promise<string> => {
+  try {
+    const apiKey = await chrome.storage.local.get(['noditApiKey']);
+    if (!apiKey.noditApiKey) {
+      console.error('Nodit API key not found');
+      return '';
+    }
+
+    const response = await fetch(`https://${protocol}-${network}.nodit.io`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey.noditApiKey
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getCode',
+        params: [address, 'latest'],
+        id: 1
+      })
+    });
+    
+    const data = await response.json();
+    console.log('eth_getCode API response:', data);
+    return data.result || '';
+  } catch (error) {
+    console.error('Error getting contract code:', error);
+    return '';
+  }
+};
+
+// 주소 타입 판별
+const determineAddressType = async (
+  protocol: string, 
+  network: string, 
+  address: string
+): Promise<string> => {
+  try {
+    console.log(`Determining address type for: ${address}`);
+    console.log(`Protocol: ${protocol}, Network: ${network}`);
+    
+    // 1. eth_getCode로 bytecode 확인
+    const code = await getContractCode(protocol, network, address);
+    console.log(`Contract code: ${code}`);
+    
+    // 2. 값이 없거나 "0x"로 응답하면 Account
+    if (!code || code === "0x") {
+      console.log('No contract code found - Account');
+      return "Account";
+    }
+    
+    // 3. 값이 존재하는데 0xef0100으로 시작한다면 Delegation
+    if (code.startsWith('0xef0100')) {
+      console.log('Detected delegation contract (0xef0100)');
+      return "Delegation";
+    }
+    
+    // 4. 그 외 값이 존재한다면 Contract
+    console.log('Contract code exists - Contract');
+    return "Contract";
+  } catch (error) {
+    console.error('Error determining address type:', error);
+    return "Account";
   }
 };
 
@@ -120,6 +264,11 @@ const handleClose = () => {
 };
 
 const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
+  // 함수 시그니처 상태
+  const [functionSignature, setFunctionSignature] = useState<string>("Loading...");
+  // 주소 타입 상태
+  const [addressType, setAddressType] = useState<string>("Loading...");
+  
   // 실제 트랜잭션 데이터 추출 (params 배열의 첫 번째 요소가 실제 트랜잭션)
   const actualTx = tx.params && Array.isArray(tx.params) && tx.params.length > 0 ? tx.params[0] : tx;
   
@@ -137,12 +286,46 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   
   const chainInfo = getChainInfo(chainId);
   
+  // 함수 시그니처 조회
+  useEffect(() => {
+    const loadFunctionSignature = async () => {
+      if (actualTx.data && actualTx.data !== "0x" && actualTx.data.length >= 10) {
+        const signature = await fetchFunctionSignature(actualTx.data);
+        setFunctionSignature(signature);
+      } else {
+        setFunctionSignature("No function");
+      }
+    };
+    
+    loadFunctionSignature();
+  }, [actualTx.data]);
+
+  // 주소 타입 조회
+  useEffect(() => {
+    const loadAddressType = async () => {
+      if (chainInfo && actualTx.to) {
+        const type = await determineAddressType(
+          chainInfo.protocol,
+          chainInfo.network,
+          actualTx.to
+        );
+        setAddressType(type);
+      } else {
+        setAddressType("Unknown");
+      }
+    };
+    
+    loadAddressType();
+  }, [chainInfo, actualTx.to]);
+  
   // Raw 데이터에서 실제 존재하는 필드만 필터링
-  const availableFields = Object.keys(fieldLabel).filter(key => 
-    actualTx.hasOwnProperty(key) && actualTx[key] !== undefined && actualTx[key] !== null
-  );
-
-
+  const availableFields = Object.keys(fieldLabel).filter(key => {
+    if (key === 'function') return true; // function 필드는 항상 표시
+    if (!actualTx.hasOwnProperty(key)) return false;
+    if (actualTx[key] === undefined || actualTx[key] === null) return false;
+    // 다른 필드들은 빈 값이면 제외
+    return actualTx[key] !== "" && actualTx[key] !== "0x0";
+  });
 
   return (
     <div style={{ 
@@ -150,7 +333,9 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", 
       background: "#fff", 
       minHeight: "100vh", 
-      maxWidth: 420,
+      width: "100%",
+      maxWidth: "100vw",
+      boxSizing: "border-box",
       position: "relative"
     }}>
       {/* 헤더 (close 버튼 제거) */}
@@ -252,47 +437,58 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
         )}
       </div>
 
-
-
       {/* 트랜잭션 정보 테이블 */}
       <div style={{ marginBottom: 24 }}>
         <table style={{ 
           width: "100%", 
           borderCollapse: "collapse", 
-          fontSize: 14,
+          fontSize: 13,
           border: "1px solid #E5E7EB",
           borderRadius: "8px",
-          overflow: "hidden"
+          overflow: "hidden",
+          tableLayout: "fixed"
         }}>
           <tbody>
             {availableFields.length > 0 ? (
               availableFields.map((key, index) => {
                 const value = actualTx[key];
-                const formattedValue = formatValue(key, value);
+                const formattedValue = formatValue(key, value, functionSignature);
                 const isEvenRow = index % 2 === 0;
                 
                 return (
                   <tr key={key} style={{ 
                     backgroundColor: isEvenRow ? "#F9FAFB" : "#FFFFFF"
                   }}>
-                    <td style={{ 
-                      color: "#374151", 
-                      fontWeight: 600, 
-                      padding: "12px 16px", 
-                      width: "40%",
-                      borderRight: "1px solid #E5E7EB",
-                      verticalAlign: "top"
-                    }}>
+                                      <td style={{ 
+                    color: "#374151", 
+                    fontWeight: 600, 
+                    padding: "8px 12px", 
+                    width: "22%",
+                    borderRight: "1px solid #E5E7EB",
+                    verticalAlign: "top",
+                    whiteSpace: "nowrap",
+                    fontSize: "12px"
+                  }}>
+                    <div>
                       {fieldLabel[key]}
-                    </td>
-                    <td style={{ 
-                      color: "#111827", 
-                      padding: "12px 16px", 
-                      wordBreak: "break-all",
-                      fontFamily: key === "data" || key === "from" || key === "to" ? "monospace" : "inherit",
-                      fontSize: key === "data" || key === "from" || key === "to" ? "12px" : "14px"
-                    }}>
-                      {formattedValue}
+                      {key === "to" && (
+                        <div style={{ marginTop: "4px" }}>
+                          <AddressTypeTag type={addressType} />
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ 
+                    color: "#111827", 
+                    padding: "8px 12px", 
+                    wordBreak: "break-all",
+                    whiteSpace: "normal",
+                    fontFamily: key === "from" || key === "to" || key === "function" ? "monospace" : "inherit",
+                    fontSize: key === "from" || key === "to" || key === "function" ? "11px" : "12px",
+                    display: "flex",
+                    alignItems: "center"
+                                      }}>
+                      <span>{formattedValue}</span>
                     </td>
                   </tr>
                 );
@@ -310,19 +506,21 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
                     <td style={{ 
                       color: "#374151", 
                       fontWeight: 600, 
-                      padding: "12px 16px", 
-                      width: "40%",
+                      padding: "8px 12px", 
+                      width: "22%",
                       borderRight: "1px solid #E5E7EB",
-                      verticalAlign: "top"
+                      verticalAlign: "top",
+                      whiteSpace: "nowrap",
+                      fontSize: "12px"
                     }}>
                       {key}
                     </td>
                     <td style={{ 
                       color: "#111827", 
-                      padding: "12px 16px", 
+                      padding: "8px 12px", 
                       wordBreak: "break-all",
                       fontFamily: "monospace",
-                      fontSize: "12px"
+                      fontSize: "11px"
                     }}>
                       {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </td>
@@ -353,15 +551,17 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
         </div>
         <pre style={{ 
           background: "#FFFFFF", 
-          padding: 12, 
+          padding: 8, 
           borderRadius: 6, 
-          fontSize: 11, 
+          fontSize: 10, 
           margin: 0, 
           overflowX: "auto",
           border: "1px solid #E5E7EB",
           fontFamily: "monospace",
-          lineHeight: 1.4,
-          color: "#374151"
+          lineHeight: 1.3,
+          color: "#374151",
+          wordBreak: "break-all",
+          whiteSpace: "pre-wrap"
         }}>
           {JSON.stringify(tx, null, 2)}
         </pre>
