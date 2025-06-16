@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Nodit Minion",
   "version": "1.0.0",
-  "description": "Nodit Extension",
+  "description": "Nodit Minion",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
   "action": {
