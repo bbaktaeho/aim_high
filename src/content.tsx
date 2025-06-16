@@ -1554,7 +1554,7 @@ const initializeContentScript = () => {
   // 디버깅을 위한 전역 함수들 추가
   (window as any).noditDebug = {
     checkStatus: () => {
-      console.log('🔍 Nodit Minion Debug Info:');
+      console.log('🔍 Web3 Minion Debug Info:');
       console.log('- Extension enabled:', isEnabled);
       console.log('- Floating button element:', floatingButton);
       console.log('- Floating button display:', floatingButton?.style.display);

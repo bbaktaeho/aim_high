@@ -301,7 +301,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               <ToggleButton isActive={false} onClick={() => {}} />
             </div>
 
-            <div style={{
+            {/* <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -319,7 +319,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
                 </p>
               </div>
               <ToggleButton isActive={false} onClick={() => {}} />
-            </div>
+            </div> */}
           </div>
         </section>
 

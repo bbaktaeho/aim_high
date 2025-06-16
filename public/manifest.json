@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Nodit Minion",
+  "name": "Web3 Minion",
   "version": "1.0.0",
-  "description": "Nodit Minion",
+  "description": "Web3 Minion",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
   "action": {

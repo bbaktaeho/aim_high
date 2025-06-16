@@ -41,10 +41,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
         <div style={{
           width: '100%',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
           paddingBottom: '12px',
           marginBottom: '32px',
+          position: 'relative',
         }}>
           <span style={{
             fontSize: '20px',
@@ -55,6 +56,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
           <span style={{
             fontSize: '18px',
             cursor: 'pointer',
+            position: 'absolute',
+            right: 0,
           }}>
             ⓘ
           </span>
