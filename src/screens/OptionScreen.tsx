@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { styles } from './styles';
 
 interface OptionScreenProps {
   onBack: () => void;
@@ -130,268 +129,317 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     return `${key.substring(0, 4)}${'•'.repeat(key.length - 8)}${key.substring(key.length - 4)}`;
   };
 
+  const ToggleButton: React.FC<{ isActive: boolean; onClick: () => void }> = ({ isActive, onClick }) => (
+    <button
+      onClick={onClick}
+      style={{
+        width: '40px',
+        height: '24px',
+        backgroundColor: isActive ? '#00d16c' : '#444',
+        borderRadius: '20px',
+        border: 'none',
+        position: 'relative',
+        cursor: 'pointer',
+        transition: 'background-color 0.3s ease',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: '4px',
+          left: isActive ? '20px' : '4px',
+          width: '16px',
+          height: '16px',
+          background: '#fff',
+          borderRadius: '50%',
+          transition: 'all 0.3s ease',
+        }}
+      />
+    </button>
+  );
+
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <button onClick={onBack} style={styles.backButton}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <h2 style={styles.title}>Settings</h2>
-        <div style={{ width: '40px' }} /> {/* Spacer for alignment */}
-      </div>
-
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-        <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Account Tracker</span>
-          <label style={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={isEnabled}
-              onChange={handleToggle}
-              style={styles.toggleInput}
-            />
-            <span style={{
-              ...styles.toggleSlider,
-              ...(isEnabled ? styles.toggleSliderActive : {})
-            }}>
-              <span style={{
-                ...styles.toggleButton,
-                ...(isEnabled ? styles.toggleButtonActive : {})
-              }} />
-            </span>
-          </label>
-        </div>
-        <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Transaction Tracker</span>
-          <label style={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={isTransactionCheckerEnabled}
-              onChange={handleTransactionCheckerToggle}
-              style={styles.toggleInput}
-            />
-            <span style={{
-              ...styles.toggleSlider,
-              ...(isTransactionCheckerEnabled ? styles.toggleSliderActive : {})
-            }}>
-              <span style={{
-                ...styles.toggleButton,
-                ...(isTransactionCheckerEnabled ? styles.toggleButtonActive : {})
-              }} />
-            </span>
-          </label>
-        </div>
-        <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Dark Mode</span>
-          <label style={styles.toggleSwitch}>
-            <input type="checkbox" style={styles.toggleInput} />
-            <span style={styles.toggleSlider}>
-              <span style={styles.toggleButton} />
-            </span>
-          </label>
-        </div>
-        <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Notifications</span>
-          <label style={styles.toggleSwitch}>
-            <input type="checkbox" style={styles.toggleInput} />
-            <span style={styles.toggleSlider}>
-              <span style={styles.toggleButton} />
-            </span>
-          </label>
-        </div>
-        <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Auto Connect</span>
-          <label style={styles.toggleSwitch}>
-            <input type="checkbox" style={styles.toggleInput} />
-            <span style={styles.toggleSlider}>
-              <span style={styles.toggleButton} />
-            </span>
-          </label>
-        </div>
-      </div>
-
-      {/* API Key Section */}
-      {apiKey && (
+    <div style={{
+      margin: 0,
+      padding: 0,
+      backgroundColor: '#000',
+      fontFamily: "'Noto Sans KR', sans-serif",
+      color: 'white',
+      width: '100%',
+      height: '100%',
+    }}>
+      <div style={{
+        padding: '16px',
+        maxWidth: '400px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Header */}
         <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          padding: '16px',
-          marginTop: '16px',
-          marginBottom: '16px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '20px',
+          position: 'relative',
         }}>
+          <span
+            onClick={onBack}
+            style={{
+              fontSize: '20px',
+              cursor: 'pointer',
+              position: 'absolute',
+              left: 0,
+            }}
+          >
+            ←
+          </span>
+          <span style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+          }}>
+            Setting
+          </span>
+        </div>
+
+        {/* 계정 정보 섹션 */}
+        <section>
+          <h2 style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            marginBottom: '12px',
+          }}>
+            계정 정보
+          </h2>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '12px'
+            backgroundColor: '#1a1a1a',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '30px',
           }}>
             <div style={{
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: '8px'
+              padding: '12px 0',
+              borderBottom: '1px solid #333',
+            }}>
+              <div>
+                <strong>Account Tracker</strong>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0',
+                }}>
+                  웹 상의 주소를 드래그하면 정보를 분석합니다.
+                </p>
+              </div>
+              <ToggleButton isActive={isEnabled} onClick={handleToggle} />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              borderBottom: '1px solid #333',
+            }}>
+              <div>
+                <strong>Transaction Checker</strong>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0',
+                }}>
+                  트랜잭션 발생시 분석하여 인사이트를 제공합니다.
+                </p>
+              </div>
+              <ToggleButton isActive={isTransactionCheckerEnabled} onClick={handleTransactionCheckerToggle} />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              borderBottom: '1px solid #333',
+            }}>
+              <div>
+                <strong>On-chain Notification</strong>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0',
+                }}>
+                  내 계정의 온체인 활동이 감지되면 알려줍니다.
+                </p>
+              </div>
+              <ToggleButton isActive={false} onClick={() => {}} />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              borderBottom: '1px solid #333',
+            }}>
+              <div>
+                <strong>Dark Mode</strong>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0',
+                }}>
+                  다크 모드 UI를 적용합니다.
+                </p>
+              </div>
+              <ToggleButton isActive={false} onClick={() => {}} />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+            }}>
+              <div>
+                <strong>Auto Connect</strong>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#aaa',
+                  marginTop: '4px',
+                  margin: '4px 0 0 0',
+                }}>
+                  로그인 시 API Key 및 지갑을 자동으로 연결합니다.
+                </p>
+              </div>
+              <ToggleButton isActive={false} onClick={() => {}} />
+            </div>
+          </div>
+        </section>
+
+        {/* Nodit API Key 섹션 */}
+        {apiKey && (
+          <section>
+            <h2 style={{
+              fontSize: '18px',
+              fontWeight: 'bold',
+              marginBottom: '12px',
+            }}>
+              Nodit API Key
+            </h2>
+            <div style={{
+              backgroundColor: '#1a1a1a',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '30px',
             }}>
               <div style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '10px'
+                marginBottom: '8px',
               }}>
-                🔑
+                <strong>연결된 Key</strong>
+                <span
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  style={{
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  👁
+                </span>
               </div>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#374151'
+              
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={showApiKey ? apiKey : maskApiKey(apiKey)}
+                readOnly
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: 'none',
+                  backgroundColor: '#333',
+                  borderRadius: '8px',
+                  color: 'white',
+                  marginBottom: '12px',
+                  boxSizing: 'border-box',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                }}
+              />
+              
+              <p style={{
+                fontSize: '13px',
+                color: '#aaa',
+                lineHeight: '1.4',
+                marginBottom: '16px',
+                margin: '0 0 16px 0',
               }}>
-                Nodit API Key
-              </span>
+                이 키는 블록체인 분석 및 트랜잭션 체킹에 사용됩니다. 키를 안전하게 보관하고 타인과 공유하지 마세요.
+              </p>
+              
+              <button
+                onClick={handleReset}
+                disabled={isResetting}
+                style={{
+                  width: '100%',
+                  backgroundColor: isResetting ? 'rgba(0, 209, 108, 0.7)' : '#00d16c',
+                  color: 'black',
+                  padding: '12px',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '15px',
+                  fontWeight: 'bold',
+                  cursor: isResetting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                {isResetting && (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(0, 0, 0, 0.3)',
+                    borderTop: '2px solid black',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }} />
+                )}
+                {isResetting ? 'Resetting...' : 'Reset API Key'}
+              </button>
             </div>
-            <button
-              onClick={() => setShowApiKey(!showApiKey)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                borderRadius: '4px',
-                color: '#6B7280',
-                fontSize: '12px',
-                transition: 'color 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.color = '#374151';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.color = '#6B7280';
-              }}
-            >
-              {showApiKey ? '👁️ Hide' : '👁️‍🗨️ Show'}
-            </button>
-          </div>
-          
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: '#F9FAFB',
-            border: '1px solid #E5E7EB',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <code style={{
-              flex: 1,
-              fontFamily: 'Monaco, Consolas, "Courier New", monospace',
-              fontSize: '12px',
-              color: '#374151',
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              wordBreak: 'break-all'
-            }}>
-              {showApiKey ? apiKey : maskApiKey(apiKey)}
-            </code>
-            
-            <button
-              onClick={handleCopyApiKey}
-              style={{
-                background: copySuccess ? '#10B981' : '#FFFFFF',
-                border: '1px solid #E5E7EB',
-                borderRadius: '6px',
-                padding: '6px 8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                fontWeight: '500',
-                color: copySuccess ? '#FFFFFF' : '#374151',
-                transition: 'all 0.2s ease',
-                minWidth: '60px',
-                justifyContent: 'center'
-              }}
-              onMouseOver={(e) => {
-                if (!copySuccess) {
-                  e.currentTarget.style.background = '#F3F4F6';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!copySuccess) {
-                  e.currentTarget.style.background = '#FFFFFF';
-                  e.currentTarget.style.borderColor = '#E5E7EB';
-                }
-              }}
-            >
-              {copySuccess ? (
-                <>
-                  <span>✓</span>
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 4V16C8 17.1046 8.89543 18 10 18H18C19.1046 18 20 17.1046 20 16V7.24264C20 6.97721 19.8946 6.7228 19.7071 6.53553L16.4645 3.29289C16.2772 3.10536 16.0228 3 15.7574 3H10C8.89543 3 8 3.89543 8 5Z" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M16 18V20C16 21.1046 15.1046 22 14 22H6C4.89543 22 4 21.1046 4 20V9C4 7.89543 4.89543 7 6 7H8" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
-          
-          <div style={{
-            fontSize: '11px',
-            color: '#6B7280',
-            marginTop: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
-            <span>ℹ️</span>
-            <span>This key is used for blockchain analysis and transaction checking</span>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
 
-      <div style={{ marginTop: '8px' }}>
-        <button
-          onClick={handleReset}
-          disabled={isResetting}
-          style={{
-            ...styles.button,
-            backgroundColor: '#EF4444',
-            opacity: isResetting ? 0.8 : 1,
-            transition: 'background-color 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            if (!isResetting) {
-              e.currentTarget.style.backgroundColor = '#DC2626';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!isResetting) {
-              e.currentTarget.style.backgroundColor = '#EF4444';
-            }
-          }}
-        >
-          {isResetting ? (
-            <div style={styles.loadingContainer}>
-              <div style={styles.loadingSpinner} />
-              Resetting...
-            </div>
-          ) : (
-            'Reset Nodit Key'
-          )}
-        </button>
+        {/* Footer */}
+        <footer style={{
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#777',
+          marginTop: '20px',
+        }}>
+          Powered by Nodit
+        </footer>
       </div>
+
+      {/* CSS Animation */}
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 }; 
