@@ -36,11 +36,11 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
             marginBottom: '16px',
           }}>
             <div style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#1F2937',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: 'white',
             }}>
-              Multi-Chain Account Analysis
+              온체인 활동 분석
             </div>
             <button
               onClick={onRefreshStats}
@@ -48,34 +48,35 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                backgroundColor: isLoadingStats ? '#F3F4F6' : '#10B981',
-                color: isLoadingStats ? '#9CA3AF' : '#FFFFFF',
+                justifyContent: 'center',
+                padding: '8px',
+                backgroundColor: 'transparent',
+                color: isLoadingStats ? '#888' : 'white',
                 border: 'none',
                 borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
                 cursor: isLoadingStats ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'background-color 0.2s ease',
+                width: '36px',
+                height: '36px',
               }}
               onMouseOver={(e) => {
                 if (!isLoadingStats) {
-                  e.currentTarget.style.backgroundColor = '#059669';
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                 }
               }}
               onMouseOut={(e) => {
                 if (!isLoadingStats) {
-                  e.currentTarget.style.backgroundColor = '#10B981';
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }
               }}
             >
               <svg 
-                width="16" 
-                height="16" 
+                width="18" 
+                height="18" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 style={{
+                  color: isLoadingStats ? '#888' : 'white',
                   transform: isLoadingStats ? 'rotate(360deg)' : 'rotate(0deg)',
                   transition: 'transform 1s linear',
                   animation: isLoadingStats ? 'spin 1s linear infinite' : 'none',
@@ -89,7 +90,6 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
                   strokeLinejoin="round"
                 />
               </svg>
-              {isLoadingStats ? 'Loading...' : 'Refresh'}
             </button>
           </div>
           
@@ -97,15 +97,15 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
             <div style={{
               padding: '40px 20px',
               textAlign: 'center',
-              backgroundColor: '#F9FAFB',
+              backgroundColor: '#1a1a1a',
               borderRadius: '12px',
-              border: '1px solid #E5E7EB',
+              border: '1px solid #333',
             }}>
               <div style={{
                 width: '32px',
                 height: '32px',
-                border: '3px solid #E5E7EB',
-                borderTop: '3px solid #10B981',
+                border: '3px solid #333',
+                borderTop: '3px solid #00d16c',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite',
                 margin: '0 auto',
@@ -113,7 +113,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
               <div style={{
                 marginTop: '12px',
                 fontSize: '14px',
-                color: '#6B7280',
+                color: '#aaa',
               }}>
                 Loading account statistics...
               </div>
@@ -127,9 +127,9 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
             <div style={{
               padding: '32px 20px',
               textAlign: 'center',
-              backgroundColor: '#F9FAFB',
+              backgroundColor: '#1a1a1a',
               borderRadius: '12px',
-              border: '1px solid #E5E7EB',
+              border: '1px solid #333',
             }}>
               <svg 
                 width="48" 
@@ -138,7 +138,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
                 fill="none" 
                 style={{ 
                   margin: '0 auto 16px',
-                  color: '#9CA3AF'
+                  color: '#666'
                 }}
               >
                 <path 
@@ -152,14 +152,14 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
               <div style={{
                 fontSize: '16px',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'white',
                 marginBottom: '8px',
               }}>
                 Ready to analyze your account
               </div>
               <div style={{
                 fontSize: '14px',
-                color: '#6B7280',
+                color: '#aaa',
                 marginBottom: '16px',
               }}>
                 Click the refresh button above to load your multi-chain statistics
@@ -168,8 +168,8 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
                 onClick={onRefreshStats}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#10B981',
-                  color: '#FFFFFF',
+                  backgroundColor: '#00d16c',
+                  color: 'black',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -178,10 +178,10 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
                   transition: 'background-color 0.2s ease',
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#059669';
+                  e.currentTarget.style.backgroundColor = '#00a865';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#10B981';
+                  e.currentTarget.style.backgroundColor = '#00d16c';
                 }}
               >
                 Load Statistics
@@ -194,13 +194,13 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
         <div style={{
           marginTop: '24px',
           padding: '16px',
-          backgroundColor: '#FEF3C7',
-          borderRadius: '8px',
-          border: '1px solid #F59E0B',
+          backgroundColor: '#2d1b00',
+          borderRadius: '12px',
+          border: '1px solid #d97706',
         }}>
           <div style={{
             fontSize: '14px',
-            color: '#92400E',
+            color: '#fbbf24',
             fontWeight: '500',
             marginBottom: '4px',
           }}>
@@ -208,7 +208,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({
           </div>
           <div style={{
             fontSize: '13px',
-            color: '#92400E',
+            color: '#fbbf24',
           }}>
             Please configure your Nodit API key in settings to view account analysis.
           </div>

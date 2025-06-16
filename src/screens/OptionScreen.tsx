@@ -140,7 +140,8 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
         border: 'none',
         position: 'relative',
         cursor: 'pointer',
-        transition: 'background-color 0.3s ease',
+        transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: isActive ? '0 2px 8px rgba(0, 209, 108, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.2)',
       }}
     >
       <div
@@ -152,7 +153,9 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
           height: '16px',
           background: '#fff',
           borderRadius: '50%',
-          transition: 'all 0.3s ease',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
         }}
       />
     </button>
@@ -202,14 +205,14 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
           </span>
         </div>
 
-        {/* 계정 정보 섹션 */}
+        {/* 설정 정보 섹션 */}
         <section>
           <h2 style={{
             fontSize: '18px',
             fontWeight: 'bold',
             marginBottom: '12px',
           }}>
-            계정 정보
+            설정 정보
           </h2>
           <div style={{
             backgroundColor: '#1a1a1a',
