@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface MetaMaskState {
   account: string | null;
@@ -20,6 +20,116 @@ export const useMetaMask = () => {
     isContentScriptReady: false,
     isRequestPending: false,
   });
+
+  // Storage에서 연결 상태 로드
+  const loadConnectionStateFromStorage = useCallback(async () => {
+    try {
+      const result = await chrome.storage.local.get(["walletAccount", "walletChainId", "walletDisconnected"]);
+
+      if (result.walletDisconnected) {
+        // 수동으로 연결 해제한 경우
+        setState((prev) => ({
+          ...prev,
+          account: null,
+          chainId: null,
+        }));
+        console.log("🔌 Loaded disconnected state from storage");
+      } else if (result.walletAccount) {
+        // 연결된 상태가 저장되어 있는 경우
+        setState((prev) => ({
+          ...prev,
+          account: result.walletAccount,
+          chainId: result.walletChainId || null,
+        }));
+        console.log("✅ Loaded connection state from storage:", {
+          account: result.walletAccount,
+          chainId: result.walletChainId,
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error loading connection state from storage:", error);
+    }
+  }, []);
+
+  // Storage에 연결 상태 저장
+  const saveConnectionStateToStorage = useCallback(async (account: string | null, chainId: number | null) => {
+    try {
+      if (account) {
+        await chrome.storage.local.set({
+          walletAccount: account,
+          walletChainId: chainId,
+          walletDisconnected: false,
+        });
+        console.log("💾 Saved connection state to storage:", { account, chainId });
+      } else {
+        await chrome.storage.local.set({
+          walletAccount: null,
+          walletChainId: null,
+          walletDisconnected: true,
+        });
+        console.log("💾 Saved disconnected state to storage");
+      }
+    } catch (error) {
+      console.error("❌ Error saving connection state to storage:", error);
+    }
+  }, []);
+
+  // Storage 변경 이벤트 감지 (다른 탭에서 상태 변경 시)
+  useEffect(() => {
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
+      if (area === "local") {
+        let shouldUpdate = false;
+        let newAccount = state.account;
+        let newChainId = state.chainId;
+
+        // 계정 변경 감지
+        if (changes.walletAccount) {
+          newAccount = changes.walletAccount.newValue || null;
+          shouldUpdate = true;
+          console.log("🔄 Account changed in storage:", newAccount);
+        }
+
+        // 체인 변경 감지
+        if (changes.walletChainId) {
+          newChainId = changes.walletChainId.newValue || null;
+          shouldUpdate = true;
+          console.log("🔄 ChainId changed in storage:", newChainId);
+        }
+
+        // 연결 해제 감지
+        if (changes.walletDisconnected) {
+          const isDisconnected = changes.walletDisconnected.newValue;
+          if (isDisconnected) {
+            newAccount = null;
+            newChainId = null;
+            shouldUpdate = true;
+            console.log("🔄 Disconnected in storage");
+          }
+        }
+
+        // 상태 업데이트
+        if (shouldUpdate) {
+          setState((prev) => ({
+            ...prev,
+            account: newAccount,
+            chainId: newChainId,
+          }));
+          console.log("🔄 Updated state from storage sync:", { account: newAccount, chainId: newChainId });
+        }
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [state.account, state.chainId]);
+
+  // 컴포넌트 마운트 시 저장된 상태 로드
+  useEffect(() => {
+    loadConnectionStateFromStorage();
+  }, [loadConnectionStateFromStorage]);
 
   // Check if MetaMask content script is ready
   const checkMetaMaskContentScriptReady = useCallback(async (tabId: number): Promise<boolean> => {
@@ -55,6 +165,9 @@ export const useMetaMask = () => {
     console.log("🚀 [useMetaMask] Initializing MetaMask connection...");
 
     try {
+      // 먼저 storage에서 상태 로드
+      await loadConnectionStateFromStorage();
+
       // Check if user manually disconnected
       const result = await chrome.storage.local.get(["walletDisconnected"]);
       const isManuallyDisconnected = result.walletDisconnected === true;
@@ -63,8 +176,6 @@ export const useMetaMask = () => {
         console.log("🔌 User manually disconnected, skipping auto-connection");
         setState((prev) => ({
           ...prev,
-          account: null,
-          chainId: null,
           isMetaMaskInstalled: true,
           isContentScriptReady: true,
         }));
@@ -139,6 +250,9 @@ export const useMetaMask = () => {
                     chainId: chainIdNum,
                   }));
 
+                  // Storage에 저장
+                  await saveConnectionStateToStorage(detailedInfo.selectedAddress, chainIdNum);
+
                   console.log("✅ Auto-loaded existing connection:", {
                     account: detailedInfo.selectedAddress,
                     chainId: chainIdNum,
@@ -164,7 +278,12 @@ export const useMetaMask = () => {
     }
 
     console.log("🏁 [useMetaMask] Initialize MetaMask completed");
-  }, [checkMetaMaskContentScriptReady, injectMetaMaskContentScript]);
+  }, [
+    checkMetaMaskContentScriptReady,
+    injectMetaMaskContentScript,
+    loadConnectionStateFromStorage,
+    saveConnectionStateToStorage,
+  ]);
 
   // Connect wallet
   const connectWallet = useCallback(async () => {
@@ -222,14 +341,19 @@ export const useMetaMask = () => {
             const ethereumInfo = infoResponse.data;
             const chainIdNum = ethereumInfo.chainId ? parseInt(ethereumInfo.chainId, 16) : null;
 
+            const finalAccount = ethereumInfo.selectedAddress || accounts[0];
+
             setState((prev) => ({
               ...prev,
-              account: ethereumInfo.selectedAddress || accounts[0],
+              account: finalAccount,
               chainId: chainIdNum,
             }));
 
+            // Storage에 저장
+            await saveConnectionStateToStorage(finalAccount, chainIdNum);
+
             console.log("✅ Connection approved and account info updated:", {
-              account: ethereumInfo.selectedAddress || accounts[0],
+              account: finalAccount,
               chainId: chainIdNum,
             });
           } else {
@@ -239,6 +363,10 @@ export const useMetaMask = () => {
               account: accounts[0],
               chainId: null,
             }));
+
+            // Storage에 저장 (fallback)
+            await saveConnectionStateToStorage(accounts[0], null);
+
             console.log("✅ Connection approved (fallback):", accounts[0]);
           }
         } else {
@@ -274,15 +402,21 @@ export const useMetaMask = () => {
         setState((prev) => ({ ...prev, isRequestPending: false }));
       }, 1000);
     }
-  }, [state.isMetaMaskInstalled, state.isContentScriptReady, state.isConnecting, state.isRequestPending]);
+  }, [
+    state.isMetaMaskInstalled,
+    state.isContentScriptReady,
+    state.isConnecting,
+    state.isRequestPending,
+    saveConnectionStateToStorage,
+  ]);
 
   // Disconnect wallet
   const disconnectWallet = useCallback(async () => {
     console.log("🔌 [useMetaMask] Disconnecting wallet...");
 
     try {
-      // Set disconnected flag in storage
-      await chrome.storage.local.set({ walletDisconnected: true });
+      // Storage에 연결 해제 상태 저장
+      await saveConnectionStateToStorage(null, null);
 
       // Clear all wallet-related state
       setState((prev) => ({
@@ -313,7 +447,7 @@ export const useMetaMask = () => {
     } catch (err) {
       console.error("❌ Error disconnecting:", err);
     }
-  }, []);
+  }, [saveConnectionStateToStorage]);
 
   return {
     ...state,
