@@ -138,7 +138,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
             <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <h2 style={styles.title}>설정</h2>
+        <h2 style={styles.title}>Settings</h2>
         <div style={{ width: '40px' }} /> {/* Spacer for alignment */}
       </div>
 
