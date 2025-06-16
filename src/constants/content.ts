@@ -31,9 +31,9 @@ export const EVM_CHAINS = [
 // Address validation patterns
 export const ADDRESS_PATTERNS = {
   ethereum: /^0x[a-fA-F0-9]{40}$/,
-  tron: /^T[a-zA-Z0-9]{33}$/,
-  ethereumMatch: /0x[a-fA-F0-9]{40}/,
-  tronMatch: /T[a-zA-Z0-9]{33}/,
+  tron: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+  ethereumMatch: /0x[a-fA-F0-9]{40}/g,
+  tronMatch: /T[1-9A-HJ-NP-Za-km-z]{33}/g,
 } as const;
 
 // API configuration

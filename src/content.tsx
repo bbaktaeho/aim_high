@@ -1296,13 +1296,13 @@ const initializeContentScript = () => {
       text = text.replace(/[\s\n\r\t]/g, '');
       console.log('🧹 Cleaned text:', JSON.stringify(text));
       
-      // 이더리움 주소: 0x + 40자리 16진수, 트론 주소: T로 시작 34자리
+      // 이더리움 주소: 0x + 40자리 16진수, 트론 주소: T로 시작 34자리 Base58
       const ethRegex = /^0x[a-fA-F0-9]{40}$/;
-      const tronRegex = /^T[a-zA-Z0-9]{33}$/;
+      const tronRegex = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
       
       // 더 유연한 주소 감지: 텍스트 내에서 주소 패턴 찾기
       const ethMatch = text.match(/0x[a-fA-F0-9]{40}/);
-      const tronMatch = text.match(/T[a-zA-Z0-9]{33}/);
+      const tronMatch = text.match(/T[1-9A-HJ-NP-Za-km-z]{33}/);
       
       let detectedAddress = null;
       if (ethRegex.test(text)) {
@@ -1588,11 +1588,17 @@ const initializeContentScript = () => {
     testAddress: (address: string) => {
       console.log('🧪 Testing address:', address);
       const ethRegex = /^0x[a-fA-F0-9]{40}$/;
-      const tronRegex = /^T[a-zA-Z0-9]{33}$/;
+      const tronRegex = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
       const isEth = ethRegex.test(address);
       const isTron = tronRegex.test(address);
       console.log('- Is valid ETH address:', isEth);
       console.log('- Is valid TRON address:', isTron);
+      console.log('- Address length:', address.length);
+      console.log('- Address pattern check:');
+      console.log('  - Starts with 0x:', address.startsWith('0x'));
+      console.log('  - Starts with T:', address.startsWith('T'));
+      console.log('  - ETH hex chars only:', /^0x[a-fA-F0-9]+$/.test(address));
+      console.log('  - TRON Base58 chars only:', /^T[1-9A-HJ-NP-Za-km-z]+$/.test(address));
       return { isEth, isTron, isValid: isEth || isTron };
     },
     forceEnable: () => {

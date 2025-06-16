@@ -2,6 +2,7 @@ import { ADDRESS_PATTERNS } from "../constants/content";
 
 /**
  * Validate if a string is a valid Ethereum address
+ * Ethereum address: 0x + 40 hexadecimal characters (42 characters total)
  */
 export const isValidEthereumAddress = (address: string): boolean => {
   return ADDRESS_PATTERNS.ethereum.test(address);
@@ -9,6 +10,8 @@ export const isValidEthereumAddress = (address: string): boolean => {
 
 /**
  * Validate if a string is a valid Tron address
+ * Tron address: T + 33 Base58 characters (34 characters total)
+ * Base58 excludes: 0, O, I, l to avoid confusion
  */
 export const isValidTronAddress = (address: string): boolean => {
   return ADDRESS_PATTERNS.tron.test(address);
@@ -22,7 +25,7 @@ export const detectBlockchainAddress = (text: string): string | null => {
   // Clean text: remove whitespace, newlines, special characters
   const cleanedText = text.replace(/[\s\n\r\t]/g, "");
 
-  // Direct pattern matching
+  // Direct pattern matching - exact match
   if (isValidEthereumAddress(cleanedText)) {
     return cleanedText;
   }
@@ -31,14 +34,14 @@ export const detectBlockchainAddress = (text: string): string | null => {
     return cleanedText;
   }
 
-  // Pattern matching within text
+  // Pattern matching within text - find first occurrence
   const ethMatch = cleanedText.match(ADDRESS_PATTERNS.ethereumMatch);
-  if (ethMatch) {
+  if (ethMatch && ethMatch[0]) {
     return ethMatch[0];
   }
 
   const tronMatch = cleanedText.match(ADDRESS_PATTERNS.tronMatch);
-  if (tronMatch) {
+  if (tronMatch && tronMatch[0]) {
     return tronMatch[0];
   }
 
