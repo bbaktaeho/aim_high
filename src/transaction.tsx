@@ -1,3 +1,4 @@
+import * as ethers from "ethers";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CHAIN_CONFIG } from "./constants/chains";
@@ -15,23 +16,11 @@ function parseTxFromQuery() {
 
 // 트랜잭션 필드 라벨 매핑 (표시할 필드만)
 const fieldLabel: Record<string, string> = {
-  from: "From Address",
-  to: "To Address", 
+  from: "From",
+  to: "To", 
   value: "Value (Wei)",
   gasPrice: "Gas Price (Gwei)",
   function: "Function"
-};
-
-// Wei를 ETH로 변환
-const weiToEth = (wei: string): string => {
-  if (!wei || wei === "0x0" || wei === "0") return "0";
-  try {
-    const weiValue = BigInt(wei);
-    const ethValue = Number(weiValue) / Math.pow(10, 18);
-    return ethValue.toFixed(6);
-  } catch {
-    return wei;
-  }
 };
 
 // Wei를 Gwei로 변환
@@ -137,10 +126,28 @@ const AddressTypeTag: React.FC<{ type: string }> = ({ type }) => {
 };
 
 // 값 포맷팅 함수
-const formatValue = (key: string, value: any, functionSig?: string): string => {
-  // function 필드는 함수 시그니처 반환
+const formatValue = (key: string, value: any, functionSig?: string, decodedParams?: { name: string; type: string; value: any }[] | null): string => {
+  // function 필드는 함수 시그니처와 디코딩된 파라미터 반환
   if (key === "function") {
-    return functionSig || "Loading...";
+    let result = functionSig || "Loading...";
+    
+    if (decodedParams && decodedParams.length > 0) {
+      result += "\n\nDecoded Parameters:";
+      decodedParams.forEach((param, index) => {
+        let displayValue = param.value;
+        
+        // BigInt나 복잡한 객체는 문자열로 변환
+        if (typeof param.value === 'bigint') {
+          displayValue = param.value.toString();
+        } else if (typeof param.value === 'object' && param.value !== null) {
+          displayValue = JSON.stringify(param.value);
+        }
+        
+        result += `\n  ${param.name}: ${displayValue}`;
+      });
+    }
+    
+    return result;
   }
   
   if (!value || value === "0x" || value === "0x0") return "0";
@@ -167,29 +174,76 @@ const formatValue = (key: string, value: any, functionSig?: string): string => {
   }
 };
 
-// 함수 시그니처 조회
-const fetchFunctionSignature = async (hexSignature: string): Promise<string> => {
-  if (!hexSignature || hexSignature === "0x" || hexSignature.length < 10) {
-    return "No function";
+// 함수 시그니처와 파라미터 디코딩 결과 타입
+interface FunctionDecodeResult {
+  signature: string;
+  decodedParams: { name: string; type: string; value: any }[] | null;
+}
+
+// 함수 시그니처 조회 및 파라미터 디코딩
+const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<FunctionDecodeResult> => {
+  if (!hexData || hexData === "0x" || hexData.length < 10) {
+    return { signature: "No function", decodedParams: null };
   }
   
   try {
-    const signature = hexSignature.substring(0, 10); // 앞 10자리 추출 (0x + 8자리)
+    const signature = hexData.substring(0, 10); // 앞 10자리 추출 (0x + 8자리)
+    const dataArgs = hexData.substring(10); // 나머지 데이터 (파라미터 부분)
+    
     const response = await fetch(`https://www.4byte.directory/api/v1/signatures/?format=json&hex_signature=${signature}`);
     const data = await response.json();
     
-    if (data.results && data.results.length > 0) {
-      return data.results[0].text_signature;
+    if (!data.results || data.results.length === 0) {
+      return { signature: `Unknown (${signature})`, decodedParams: null };
     }
     
-    return `Unknown (${signature})`;
+    // 여러 결과 중에서 디코딩이 성공하는 것을 찾기
+    for (const result of data.results) {
+      try {
+        const functionSig = result.text_signature;
+        console.log(`Trying to decode with signature: ${functionSig}`);
+        
+        // 함수 시그니처에서 파라미터 타입 추출
+        const match = functionSig.match(/\((.*)\)/);
+        if (!match || !match[1]) {
+          console.log('No parameters found in signature');
+          return { signature: functionSig, decodedParams: [] };
+        }
+        
+        const paramTypes = match[1].split(',').map((type: string) => type.trim()).filter((type: string) => type.length > 0);
+        
+        if (paramTypes.length === 0) {
+          console.log('Empty parameter types');
+          return { signature: functionSig, decodedParams: [] };
+        }
+        
+        // ethers.js를 사용하여 파라미터 디코딩
+        const decodedValues = ethers.AbiCoder.defaultAbiCoder().decode(paramTypes, '0x' + dataArgs);
+        
+        // 디코딩된 값들을 파라미터 정보와 함께 반환
+        const decodedParams = paramTypes.map((type: string, index: number) => ({
+          name: `${index}`,
+          type: type,
+          value: decodedValues[index]
+        }));
+        
+        console.log('Successfully decoded parameters:', decodedParams);
+        return { signature: functionSig, decodedParams };
+        
+      } catch (decodeError) {
+        console.log(`Failed to decode with signature ${result.text_signature}:`, decodeError);
+        continue; // 다음 시그니처로 시도
+      }
+    }
+    
+    // 모든 시그니처로 디코딩 실패한 경우 첫 번째 시그니처만 반환
+    return { signature: data.results[0].text_signature, decodedParams: null };
+    
   } catch (error) {
     console.error('Error fetching function signature:', error);
-    return `Error (${hexSignature.substring(0, 10)})`;
+    return { signature: `Error (${hexData.substring(0, 10)})`, decodedParams: null };
   }
 };
-
-
 
 // Nodit Node API - eth_getCode 조회
 const getContractCode = async (protocol: string, network: string, address: string): Promise<string> => {
@@ -266,6 +320,8 @@ const handleClose = () => {
 const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   // 함수 시그니처 상태
   const [functionSignature, setFunctionSignature] = useState<string>("Loading...");
+  // 디코딩된 파라미터 상태
+  const [decodedParams, setDecodedParams] = useState<{ name: string; type: string; value: any }[] | null>(null);
   // 주소 타입 상태
   const [addressType, setAddressType] = useState<string>("Loading...");
   
@@ -290,10 +346,12 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   useEffect(() => {
     const loadFunctionSignature = async () => {
       if (actualTx.data && actualTx.data !== "0x" && actualTx.data.length >= 10) {
-        const signature = await fetchFunctionSignature(actualTx.data);
+        const { signature, decodedParams } = await fetchFunctionSignatureAndDecode(actualTx.data);
         setFunctionSignature(signature);
+        setDecodedParams(decodedParams);
       } else {
         setFunctionSignature("No function");
+        setDecodedParams(null);
       }
     };
     
@@ -452,7 +510,7 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
             {availableFields.length > 0 ? (
               availableFields.map((key, index) => {
                 const value = actualTx[key];
-                const formattedValue = formatValue(key, value, functionSignature);
+                const formattedValue = formatValue(key, value, functionSignature, decodedParams);
                 const isEvenRow = index % 2 === 0;
                 
                 return (
@@ -482,12 +540,12 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
                     color: "#111827", 
                     padding: "8px 12px", 
                     wordBreak: "break-all",
-                    whiteSpace: "normal",
+                    whiteSpace: key === "function" ? "pre-line" : "normal",
                     fontFamily: key === "from" || key === "to" || key === "function" ? "monospace" : "inherit",
                     fontSize: key === "from" || key === "to" || key === "function" ? "11px" : "12px",
                     display: "flex",
-                    alignItems: "center"
-                                      }}>
+                    alignItems: key === "function" ? "flex-start" : "center"
+                  }}>
                       <span>{formattedValue}</span>
                     </td>
                   </tr>
