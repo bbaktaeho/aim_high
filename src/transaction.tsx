@@ -556,12 +556,13 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
           fontSize: 10, 
           margin: 0, 
           overflowX: "auto",
+          overflowY: "hidden",
           border: "1px solid #E5E7EB",
           fontFamily: "monospace",
           lineHeight: 1.3,
           color: "#374151",
-          wordBreak: "break-all",
-          whiteSpace: "pre-wrap"
+          whiteSpace: "pre",
+          maxHeight: "300px"
         }}>
           {JSON.stringify(tx, null, 2)}
         </pre>
