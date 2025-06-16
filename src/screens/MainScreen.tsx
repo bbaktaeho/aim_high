@@ -45,14 +45,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
     });
   }, []);
 
-  // Initialize MetaMask when component mounts (only once when API key is loaded)
+  // Initialize MetaMask when component mounts (only once)
   useEffect(() => {
-    if (noditApiKey !== null && !isInitializedRef.current) {
-      console.log('🚀 Initializing MetaMask with API key loaded (first time only)');
+    if (!isInitializedRef.current) {
+      console.log('🚀 Initializing MetaMask on component mount (first time only)');
       isInitializedRef.current = true;
       initializeMetaMask();
     }
-  }, [noditApiKey]); // Remove initializeMetaMask from dependencies to prevent infinite loop
+  }, [initializeMetaMask]);
 
   // Transaction data listener
   useEffect(() => {

@@ -96,6 +96,7 @@ export const useMetaMask = () => {
       console.log("📋 Content script ready:", isReady);
 
       if (isReady) {
+        // 먼저 기본 MetaMask 정보 확인
         const response = await chrome.tabs.sendMessage(currentTab.id, {
           type: "GET_METAMASK_INFO",
         });
@@ -117,9 +118,39 @@ export const useMetaMask = () => {
           setState((prev) => ({ ...prev, isMetaMaskInstalled: ethereumInfo.isMetaMask }));
 
           if (ethereumInfo.isMetaMask) {
-            console.log("🦊 MetaMask detected, ready for user connection");
-            // Don't auto-connect during initialization
-            // User must explicitly click Connect button
+            console.log("🦊 MetaMask detected, checking existing connection...");
+
+            // 이미 연결된 계정이 있는지 확인
+            try {
+              const accountsResponse = await chrome.tabs.sendMessage(currentTab.id, {
+                type: "GET_METAMASK_INFO_WITH_ACCOUNTS",
+              });
+
+              if (accountsResponse.type === "METAMASK_INFO" && accountsResponse.data) {
+                const detailedInfo = accountsResponse.data;
+
+                // 이미 연결된 계정이 있으면 자동으로 로드
+                if (detailedInfo.selectedAddress) {
+                  const chainIdNum = detailedInfo.chainId ? parseInt(detailedInfo.chainId, 16) : null;
+
+                  setState((prev) => ({
+                    ...prev,
+                    account: detailedInfo.selectedAddress,
+                    chainId: chainIdNum,
+                  }));
+
+                  console.log("✅ Auto-loaded existing connection:", {
+                    account: detailedInfo.selectedAddress,
+                    chainId: chainIdNum,
+                  });
+                } else {
+                  console.log("🔗 No existing connection found, user needs to connect manually");
+                }
+              }
+            } catch (accountsError) {
+              console.log("ℹ️ No existing accounts accessible (user needs to connect):", accountsError);
+              // 이는 정상적인 경우 - 사용자가 아직 연결하지 않았음
+            }
           } else {
             setState((prev) => ({ ...prev, error: "MetaMask is not installed" }));
           }
