@@ -176,14 +176,14 @@ const formatValue = (key: string, value: any, functionSig?: string, decodedParam
 
 // 함수 시그니처와 파라미터 디코딩 결과 타입
 interface FunctionDecodeResult {
-  signature: string;
+  signatures: string[];
   decodedParams: { name: string; type: string; value: any }[] | null;
 }
 
 // 함수 시그니처 조회 및 파라미터 디코딩
 const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<FunctionDecodeResult> => {
   if (!hexData || hexData === "0x" || hexData.length < 10) {
-    return { signature: "No function", decodedParams: null };
+    return { signatures: ["No function"], decodedParams: null };
   }
   
   try {
@@ -194,8 +194,12 @@ const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<Functio
     const data = await response.json();
     
     if (!data.results || data.results.length === 0) {
-      return { signature: `Unknown (${signature})`, decodedParams: null };
+      return { signatures: [`Unknown (${signature})`], decodedParams: null };
     }
+    
+    let successfulDecodedParams: { name: string; type: string; value: any }[] | null = null;
+    let successfulParamCount = -1;
+    const matchingSignatures: string[] = [];
     
     // 여러 결과 중에서 디코딩이 성공하는 것을 찾기
     for (const result of data.results) {
@@ -207,28 +211,47 @@ const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<Functio
         const match = functionSig.match(/\((.*)\)/);
         if (!match || !match[1]) {
           console.log('No parameters found in signature');
-          return { signature: functionSig, decodedParams: [] };
+          // 파라미터가 없는 함수들도 수집
+          if (successfulParamCount === -1 || successfulParamCount === 0) {
+            matchingSignatures.push(functionSig);
+            successfulParamCount = 0;
+            successfulDecodedParams = [];
+          }
+          continue;
         }
         
         const paramTypes = match[1].split(',').map((type: string) => type.trim()).filter((type: string) => type.length > 0);
         
         if (paramTypes.length === 0) {
           console.log('Empty parameter types');
-          return { signature: functionSig, decodedParams: [] };
+          // 파라미터가 없는 함수들도 수집
+          if (successfulParamCount === -1 || successfulParamCount === 0) {
+            matchingSignatures.push(functionSig);
+            successfulParamCount = 0;
+            successfulDecodedParams = [];
+          }
+          continue;
         }
         
         // ethers.js를 사용하여 파라미터 디코딩
         const decodedValues = ethers.AbiCoder.defaultAbiCoder().decode(paramTypes, '0x' + dataArgs);
         
-        // 디코딩된 값들을 파라미터 정보와 함께 반환
-        const decodedParams = paramTypes.map((type: string, index: number) => ({
-          name: `${index}`,
-          type: type,
-          value: decodedValues[index]
-        }));
+        // 첫 번째 성공한 디코딩이거나 같은 파라미터 개수인 경우
+        if (successfulParamCount === -1 || successfulParamCount === paramTypes.length) {
+          matchingSignatures.push(functionSig);
+          successfulParamCount = paramTypes.length;
+          
+          // 디코딩된 값들을 파라미터 정보와 함께 저장 (첫 번째 성공한 것만)
+          if (successfulDecodedParams === null) {
+            successfulDecodedParams = paramTypes.map((type: string, index: number) => ({
+              name: `${index}`,
+              type: type,
+              value: decodedValues[index]
+            }));
+          }
+        }
         
-        console.log('Successfully decoded parameters:', decodedParams);
-        return { signature: functionSig, decodedParams };
+        console.log('Successfully decoded parameters with signature:', functionSig);
         
       } catch (decodeError) {
         console.log(`Failed to decode with signature ${result.text_signature}:`, decodeError);
@@ -236,12 +259,18 @@ const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<Functio
       }
     }
     
+    // 성공한 시그니처들이 있으면 반환
+    if (matchingSignatures.length > 0) {
+      console.log('All matching signatures:', matchingSignatures);
+      return { signatures: matchingSignatures, decodedParams: successfulDecodedParams };
+    }
+    
     // 모든 시그니처로 디코딩 실패한 경우 첫 번째 시그니처만 반환
-    return { signature: data.results[0].text_signature, decodedParams: null };
+    return { signatures: [data.results[0].text_signature], decodedParams: null };
     
   } catch (error) {
     console.error('Error fetching function signature:', error);
-    return { signature: `Error (${hexData.substring(0, 10)})`, decodedParams: null };
+    return { signatures: [`Error (${hexData.substring(0, 10)})`], decodedParams: null };
   }
 };
 
@@ -346,8 +375,8 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   useEffect(() => {
     const loadFunctionSignature = async () => {
       if (actualTx.data && actualTx.data !== "0x" && actualTx.data.length >= 10) {
-        const { signature, decodedParams } = await fetchFunctionSignatureAndDecode(actualTx.data);
-        setFunctionSignature(signature);
+        const { signatures, decodedParams } = await fetchFunctionSignatureAndDecode(actualTx.data);
+        setFunctionSignature(signatures.join('\n'));
         setDecodedParams(decodedParams);
       } else {
         setFunctionSignature("No function");
