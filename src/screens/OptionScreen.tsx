@@ -144,7 +144,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
 
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
         <div style={styles.optionItem}>
-          <span style={styles.optionLabel}>Nodit Supporter</span>
+          <span style={styles.optionLabel}>Account Tracker</span>
           <label style={styles.toggleSwitch}>
             <input
               type="checkbox"
