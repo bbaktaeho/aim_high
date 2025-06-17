@@ -169,12 +169,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
 
           {/* Multi-Chain Analysis Component */}
           <MultiChainAnalysis
-            account={account}
-            chainId={chainId}
+            account={account && chainId ? { account, chainId } : null}
             noditApiKey={noditApiKey}
-            accountStats={accountStats}
-            isLoadingStats={isLoadingStats}
-            onRefreshStats={handleRefreshStats}
           />
 
           {/* Transaction Information */}
