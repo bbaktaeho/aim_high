@@ -190,6 +190,37 @@ const fetchFunctionSignatureAndDecode = async (hexData: string): Promise<Functio
     const signature = hexData.substring(0, 10); // 앞 10자리 추출 (0x + 8자리)
     const dataArgs = hexData.substring(10); // 나머지 데이터 (파라미터 부분)
     
+    // ERC-20 transfer 함수 시그니처 직접 처리
+    if (signature === "0xa9059cbb") {
+      console.log('Detected ERC-20 transfer function (0xa9059cbb)');
+      
+      try {
+        // transfer(address,uint256) 파라미터 디코딩
+        const paramTypes = ['address', 'uint256'];
+        const decodedValues = ethers.AbiCoder.defaultAbiCoder().decode(paramTypes, '0x' + dataArgs);
+        
+        const decodedParams = [
+          {
+            name: 'to',
+            type: 'address',
+            value: decodedValues[0]
+          },
+          {
+            name: 'amount',
+            type: 'uint256',
+            value: decodedValues[1]
+          }
+        ];
+        
+        console.log('Successfully decoded ERC-20 transfer parameters:', decodedParams);
+        return { signatures: ["transfer(address,uint256)"], decodedParams };
+        
+      } catch (decodeError) {
+        console.error('Failed to decode ERC-20 transfer parameters:', decodeError);
+        return { signatures: ["transfer(address,uint256)"], decodedParams: null };
+      }
+    }
+    
     const response = await fetch(`https://www.4byte.directory/api/v1/signatures/?format=json&hex_signature=${signature}`);
     const data = await response.json();
     
