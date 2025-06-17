@@ -63,22 +63,55 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
           </span>
         </div>
 
-        {/* Preview Box */}
+        {/* GIF 이미지 */}
         <div style={{
-          width: '250px',
-          height: '160px',
-          backgroundColor: '#ddd',
-          color: '#111',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          textAlign: 'center',
-          fontWeight: '500',
           marginBottom: '40px',
         }}>
-          <p style={{ margin: 0, lineHeight: '1.4' }}>
-            마우스 포인터에 따라<br />움직이는 루니 얼굴?
-          </p>
+          <img 
+            src="/images/character.gif" // GIF 파일 경로
+            alt="Character"
+            style={{
+              width: '200px',
+              height: '200px',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+            }}
+            onError={(e) => {
+              // GIF 로드 실패시 대체 이모지 표시
+              const img = e.currentTarget as HTMLImageElement;
+              img.style.display = 'none';
+              const parent = img.parentElement;
+              if (parent) {
+                parent.innerHTML = `
+                  <div style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    color: #666;
+                    text-align: center;
+                  ">
+                    <div style="
+                      font-size: 60px;
+                      margin-bottom: 8px;
+                      background: rgba(0, 209, 108, 0.1);
+                      border-radius: 50%;
+                      border: 2px solid #00d16c;
+                      width: 120px;
+                      height: 120px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                    ">🤖</div>
+                    <div style="font-size: 14px;">GIF를 불러올 수 없습니다</div>
+                  </div>
+                `;
+              }
+            }}
+          />
         </div>
 
         {/* Input Section */}

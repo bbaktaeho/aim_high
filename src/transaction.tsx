@@ -503,11 +503,11 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
         
         if (hasFunction) {
           const mainFunction = functionSignature.split('\n')[0];
-          report += `🎭 흥미롭게도 일반 사용자 지갑 형태인데 "${mainFunction}" 함수를 호출하려고 하시는군요. 이는 EIP-3074나 다른 위임 메커니즘을 사용하는 특별한 계정일 가능성이 높습니다.\n\n`;
+          report += `🎭 흥미롭게도 일반 사용자 지갑 형태인데 "${mainFunction}" 함수를 호출하려고 하시는군요. 이는 EIP-3074나 EIP-7702와 같은 계정 추상화 메커니즘을 사용하는 특별한 계정일 가능성이 높습니다. EIP-7702는 외부 소유 계정(EOA)이 스마트 컨트랙트처럼 동작할 수 있게 해주는 혁신적인 기술이에요.\n\n`;
         } else if (hasData) {
-          report += `🤔 위임 계정에 데이터를 전송하고 있지만 함수를 식별할 수 없네요. 특별한 프로토콜을 사용하는 것일 수도 있어요.\n\n`;
+          report += `🤔 위임 계정에 데이터를 전송하고 있지만 함수를 식별할 수 없네요. EIP-7702나 다른 계정 추상화 프로토콜을 사용하는 것일 수도 있어요.\n\n`;
         } else {
-          report += `위임된 계정으로 단순 전송을 하고 계시네요.\n\n`;
+          report += `위임된 계정으로 단순 전송을 하고 계시네요. 이 계정은 EIP-7702 등의 기술로 향상된 기능을 가질 수 있는 특별한 형태의 지갑입니다.\n\n`;
         }
         
       } else if (addressType === "Account") {
@@ -839,38 +839,49 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
 
       {/* Raw 데이터 섹션 */}
       <div style={{ 
-        background: "#F3F4F6", 
-        padding: 16, 
-        borderRadius: 8, 
-        border: "1px solid #E5E7EB"
+        marginBottom: 24,
+        border: "1px solid #E5E7EB",
+        borderRadius: 8,
+        overflow: "hidden"
       }}>
-        <div style={{ 
-          color: "#6B7280", 
-          fontSize: 12, 
-          fontWeight: 600, 
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px"
+        <div style={{
+          width: "100%",
+          background: "linear-gradient(135deg, #6B7280 0%, #4B5563 100%)",
+          color: "white",
+          padding: "16px 20px",
+          fontSize: "16px",
+          fontWeight: "600",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
         }}>
-          📄 Raw Transaction Data
+          <span>📄</span>
+          <span>Raw Transaction Data</span>
         </div>
-        <pre style={{ 
-          background: "#FFFFFF", 
-          padding: 8, 
-          borderRadius: 6, 
-          fontSize: 10, 
-          margin: 0, 
-          overflowX: "auto",
-          overflowY: "hidden",
-          border: "1px solid #E5E7EB",
-          fontFamily: "monospace",
-          lineHeight: 1.3,
-          color: "#374151",
-          whiteSpace: "pre",
-          maxHeight: "300px"
+        
+        <div style={{
+          background: "#FFFFFF",
+          padding: "20px",
+          borderTop: "1px solid #E5E7EB"
         }}>
-          {JSON.stringify(tx, null, 2)}
-        </pre>
+          <pre style={{ 
+            background: "#F9FAFB", 
+            padding: "16px", 
+            borderRadius: "6px", 
+            fontSize: "11px", 
+            margin: 0, 
+            overflowX: "auto",
+            overflowY: "auto",
+            border: "1px solid #E5E7EB",
+            fontFamily: "monospace",
+            lineHeight: 1.4,
+            color: "#374151",
+            whiteSpace: "pre",
+            maxHeight: "300px"
+          }}>
+            {JSON.stringify(tx, null, 2)}
+          </pre>
+        </div>
       </div>
 
 

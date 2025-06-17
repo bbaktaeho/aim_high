@@ -45,10 +45,5 @@
   "externally_connectable": {
     "matches": ["<all_urls>"]
   },
-  "icons": {
-    "16": "nodit_16.jpeg",
-    "32": "nodit_32.jpeg",
-    "48": "nodit_48.jpeg",
-    "128": "nodit_128.jpeg"
-  }
+  "icons": {}
 }
