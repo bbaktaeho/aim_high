@@ -108,41 +108,38 @@ const AddressTypeTag: React.FC<{ type: string }> = ({ type }) => {
   const getTagStyle = (type: string) => {
     const baseStyle = {
       display: "inline-block",
-      padding: "2px 8px",
-      borderRadius: "12px",
-      fontSize: "10px",
-      fontWeight: "600",
-      textTransform: "uppercase" as const
+      padding: "2px 6px",
+      borderRadius: "6px",
+      fontSize: "11px",
+      fontWeight: "bold" as const,
+      textTransform: "uppercase" as const,
+      marginLeft: "6px"
     };
 
     switch (type) {
       case "Contract":
         return {
           ...baseStyle,
-          background: "#FEF3C7",
-          color: "#92400E",
-          border: "1px solid #F59E0B"
+          background: "#F59E0B",
+          color: "#000"
         };
       case "Account":
         return {
           ...baseStyle,
-          background: "#DBEAFE",
-          color: "#1E40AF",
-          border: "1px solid #3B82F6"
+          background: "#00d16c",
+          color: "#000"
         };
       case "Delegation":
         return {
           ...baseStyle,
-          background: "#F3E8FF",
-          color: "#7C3AED",
-          border: "1px solid #8B5CF6"
+          background: "#8B5CF6",
+          color: "#fff"
         };
       default:
         return {
           ...baseStyle,
-          background: "#F3F4F6",
-          color: "#6B7280",
-          border: "1px solid #9CA3AF"
+          background: "#6B7280",
+          color: "#fff"
         };
     }
   };
@@ -706,176 +703,180 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
 
   return (
     <div style={{ 
-      padding: 24, 
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", 
-      background: "#fff", 
+      padding: "16px", 
+      fontFamily: "'Noto Sans KR', sans-serif", 
+      background: "#000", 
       minHeight: "100vh", 
       width: "100%",
       maxWidth: "100vw",
       boxSizing: "border-box",
-      position: "relative"
+      position: "relative",
+      color: "white"
     }}>
-      {/* 헤더 (close 버튼 제거) */}
+      {/* 헤더 */}
       <div style={{ 
-        marginBottom: 24,
-        paddingBottom: 16,
-        borderBottom: "2px solid #E5E7EB"
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        fontSize: "18px",
+        fontWeight: "bold",
+        marginBottom: "16px",
+        position: "relative"
       }}>
-        <h2 style={{ 
-          color: "#10B981", 
-          fontWeight: 700, 
-          margin: 0,
-          fontSize: 20,
-          textAlign: "center",
-          marginBottom: 16
+        <div style={{ flex: 1 }}></div>
+        <div style={{ 
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontWeight: "bold"
         }}>
-          🚀 Transaction Details
-        </h2>
-        
-        {/* 네트워크 정보 배지 */}
-        {chainInfo && (
-          <div style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "8px"
-          }}>
-            <div style={{
-              background: `linear-gradient(135deg, ${chainInfo.color}20 0%, ${chainInfo.color}10 100%)`,
-              border: `2px solid ${chainInfo.color}`,
-              borderRadius: "20px",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "14px",
-              fontWeight: "600"
-            }}>
-              <div style={{
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                background: chainInfo.color,
-                boxShadow: `0 0 8px ${chainInfo.color}50`
-              }} />
-              <span style={{ color: chainInfo.color }}>
-                {chainInfo.name}
-              </span>
-              <span style={{ 
-                color: "#6B7280", 
-                fontSize: "12px",
-                background: "#F3F4F6",
-                padding: "2px 6px",
-                borderRadius: "4px"
-              }}>
-                {parseInt(chainId, 16)}
-              </span>
-            </div>
-          </div>
-        )}
-        
-        {!chainInfo && chainId && (
-          <div style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center"
-          }}>
-            <div style={{
-              background: "linear-gradient(135deg, #6B728020 0%, #6B728010 100%)",
-              border: "2px solid #6B7280",
-              borderRadius: "20px",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "14px",
-              fontWeight: "600"
-            }}>
-              <div style={{
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                background: "#6B7280"
-              }} />
-              <span style={{ color: "#6B7280" }}>
-                Unknown Network
-              </span>
-              <span style={{ 
-                color: "#6B7280", 
-                fontSize: "12px",
-                background: "#F3F4F6",
-                padding: "2px 6px",
-                borderRadius: "4px"
-              }}>
-                {parseInt(chainId, 16)}
-              </span>
-            </div>
-          </div>
-        )}
+          🚀 트랜잭션 세부정보
+        </div>
+        <span
+          onClick={handleClose}
+          style={{
+            fontSize: "20px",
+            cursor: "pointer",
+            color: "#ccc",
+            zIndex: 1
+          }}
+        >
+          ✕
+        </span>
       </div>
+        
+             {/* 네트워크 정보 배지 */}
+       {chainInfo && (
+         <div style={{
+           display: "flex",
+           flexDirection: "column",
+           alignItems: "center",
+           marginBottom: "16px"
+         }}>
+           <div style={{
+             backgroundColor: "#1a1a1a",
+             borderRadius: "20px",
+             padding: "8px 16px",
+             marginBottom: "8px",
+             display: "flex",
+             alignItems: "center",
+             gap: "8px",
+             fontSize: "14px",
+             color: "#00d16c",
+             border: "1px solid #00d16c"
+           }}>
+             <div style={{
+               width: "12px",
+               height: "12px",
+               borderRadius: "50%",
+               background: chainInfo.color || "#00d16c"
+             }} />
+             <span>
+               {chainInfo.name}
+             </span>
+           </div>
+           <div style={{
+             color: "#ccc",
+             fontSize: "14px"
+           }}>
+             Chain ID: {parseInt(chainId, 16)}
+           </div>
+         </div>
+       )}
+        
+             {!chainInfo && chainId && (
+         <div style={{
+           display: "flex",
+           flexDirection: "column",
+           alignItems: "center",
+           marginBottom: "16px"
+         }}>
+           <div style={{
+             backgroundColor: "#1a1a1a",
+             borderRadius: "20px",
+             padding: "8px 16px",
+             marginBottom: "8px",
+             display: "flex",
+             alignItems: "center",
+             gap: "8px",
+             fontSize: "14px",
+             color: "#6B7280",
+             border: "1px solid #6B7280"
+           }}>
+             <div style={{
+               width: "12px",
+               height: "12px",
+               borderRadius: "50%",
+               background: "#6B7280"
+             }} />
+             <span>
+               Unknown Network
+             </span>
+           </div>
+           <div style={{
+             color: "#ccc",
+             fontSize: "14px"
+           }}>
+             Chain ID: {parseInt(chainId, 16)}
+           </div>
+         </div>
+       )}
 
       {/* 스캠 주소 경고 */}
       {isScamAddress && (
         <div style={{
-          backgroundColor: "#FEE2E2",
+          backgroundColor: "#2D1B1B",
           border: "2px solid #DC2626",
-          borderRadius: "8px",
+          borderRadius: "10px",
           padding: "16px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px"
+          marginBottom: "16px",
+          fontSize: "13px"
         }}>
           <div style={{
-            fontSize: "24px",
-            color: "#DC2626"
+            fontSize: "16px",
+            fontWeight: "bold",
+            color: "#DC2626",
+            marginBottom: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
           }}>
-            🚨
+            🚨 스캠 주소 감지
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: "16px",
-              fontWeight: "700",
-              color: "#7F1D1D",
-              marginBottom: "4px"
-            }}>
-              ⚠️ SCAM ADDRESS DETECTED
-            </div>
-            <div style={{
-              fontSize: "14px",
-              color: "#991B1B",
-              marginBottom: "8px"
-            }}>
-              This address has been reported as a scam. Do not proceed with this transaction!
-            </div>
-            <a
-              href={`https://cryptoscam.org/reports?search=${actualTx.to}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: "13px",
-                color: "#DC2626",
-                textDecoration: "underline",
-                fontWeight: "600"
-              }}
-            >
-              View scam reports on CryptoScam.org →
-            </a>
+          <div style={{
+            color: "#F87171",
+            marginBottom: "8px",
+            lineHeight: "1.4"
+          }}>
+            이 주소는 스캠으로 신고되었습니다. 이 트랜잭션을 진행하지 마세요!
           </div>
+          <a
+            href={`https://cryptoscam.org/reports?search=${actualTx.to}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: "13px",
+              color: "#00d16c",
+              textDecoration: "underline"
+            }}
+          >
+            cryptoScam.org에서 스캠 신고 보기 →
+          </a>
         </div>
       )}
 
       {/* 스캠 확인 로딩 상태 */}
       {scamCheckLoading && (
         <div style={{
-          backgroundColor: "#FEF3C7",
+          backgroundColor: "#2A1F17",
           border: "1px solid #F59E0B",
-          borderRadius: "8px",
+          borderRadius: "10px",
           padding: "12px",
-          marginBottom: "24px",
+          marginBottom: "16px",
           display: "flex",
           alignItems: "center",
-          gap: "8px"
+          gap: "8px",
+          fontSize: "13px"
         }}>
           <div style={{
             width: "16px",
@@ -886,271 +887,206 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
             animation: "spin 1s linear infinite"
           }}></div>
           <div style={{
-            fontSize: "14px",
-            color: "#92400E"
+            color: "#FCD34D"
           }}>
             Checking address safety...
           </div>
         </div>
       )}
 
-      {/* 트랜잭션 정보 테이블 */}
-      <div style={{ marginBottom: 24 }}>
-        <table style={{ 
-          width: "100%", 
-          borderCollapse: "collapse", 
-          fontSize: 13,
-          border: "1px solid #E5E7EB",
-          borderRadius: "8px",
-          overflow: "hidden",
-          tableLayout: "fixed"
-        }}>
-          <tbody>
-            {availableFields.length > 0 ? (
-              availableFields.map((key, index) => {
-                const value = actualTx[key];
-                const formattedValue = formatValue(key, value, functionSignature, decodedParams);
-                const isEvenRow = index % 2 === 0;
-                
-                return (
-                  <tr key={key} style={{ 
-                    backgroundColor: isEvenRow ? "#F9FAFB" : "#FFFFFF"
-                  }}>
-                                      <td style={{ 
-                    color: "#374151", 
-                    fontWeight: 600, 
-                    padding: "8px 12px", 
-                    width: "22%",
-                    borderRight: "1px solid #E5E7EB",
-                    verticalAlign: "top",
-                    whiteSpace: "nowrap",
-                    fontSize: "12px"
-                  }}>
-                    <div>
-                      {fieldLabel[key]}
-                      {key === "to" && (
-                        <div style={{ marginTop: "4px" }}>
-                          <AddressTypeTag type={addressType} />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td style={{ 
-                    color: "#111827", 
-                    padding: "8px 12px", 
-                    wordBreak: "break-all",
-                    whiteSpace: key === "function" ? "pre-line" : "normal",
-                    fontFamily: key === "from" || key === "to" || key === "function" ? "monospace" : "inherit",
-                    fontSize: key === "from" || key === "to" || key === "function" ? "11px" : "12px",
-                    display: "flex",
-                    alignItems: key === "function" ? "flex-start" : "center"
-                  }}>
-                      <span>{formattedValue}</span>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              // 매핑된 필드가 없을 경우 실제 트랜잭션 데이터의 모든 필드 표시
-              Object.keys(actualTx).map((key, index) => {
-                const value = actualTx[key];
-                const isEvenRow = index % 2 === 0;
-                
-                return (
-                  <tr key={key} style={{ 
-                    backgroundColor: isEvenRow ? "#F9FAFB" : "#FFFFFF"
-                  }}>
-                    <td style={{ 
-                      color: "#374151", 
-                      fontWeight: 600, 
-                      padding: "8px 12px", 
-                      width: "22%",
-                      borderRight: "1px solid #E5E7EB",
-                      verticalAlign: "top",
-                      whiteSpace: "nowrap",
-                      fontSize: "12px"
-                    }}>
-                      {key}
-                    </td>
-                    <td style={{ 
-                      color: "#111827", 
-                      padding: "8px 12px", 
-                      wordBreak: "break-all",
-                      fontFamily: "monospace",
-                      fontSize: "11px"
-                    }}>
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      {/* 트랜잭션 정보 섹션 */}
+      <div style={{
+        fontSize: "15px",
+        fontWeight: "bold",
+        margin: "24px 0 12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+      }}>
+        거래 정보
+      </div>
+
+      {/* 트랜잭션 정보 카드들 */}
+      <div style={{ marginBottom: "24px" }}>
+        {availableFields.length > 0 ? (
+          availableFields.map((key) => {
+            const value = actualTx[key];
+            const formattedValue = formatValue(key, value, functionSignature, decodedParams);
+            
+            return (
+              <div key={key} style={{
+                backgroundColor: "#1e1e1e",
+                borderRadius: "10px",
+                padding: "12px",
+                fontSize: "13px",
+                marginBottom: "12px"
+              }}>
+                <div style={{
+                  fontWeight: "bold",
+                  marginBottom: "4px",
+                  fontSize: "13px",
+                  color: "#ccc",
+                  display: "flex",
+                  alignItems: "center"
+                }}>
+                  {fieldLabel[key]}
+                  {key === "to" && (
+                    <AddressTypeTag type={addressType} />
+                  )}
+                </div>
+                <div style={{
+                  color: "#ddd",
+                  wordBreak: "break-all" as const,
+                  whiteSpace: key === "function" ? "pre-wrap" : "normal",
+                  fontFamily: key === "from" || key === "to" || key === "function" ? "monospace" : "inherit",
+                  fontSize: key === "from" || key === "to" || key === "function" ? "12px" : "13px"
+                }}>
+                  {formattedValue}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          // 매핑된 필드가 없을 경우 실제 트랜잭션 데이터의 모든 필드 표시
+          Object.keys(actualTx).map((key) => {
+            const value = actualTx[key];
+            
+            return (
+              <div key={key} style={{
+                backgroundColor: "#1e1e1e",
+                borderRadius: "10px",
+                padding: "12px",
+                fontSize: "13px",
+                marginBottom: "12px"
+              }}>
+                <div style={{
+                  fontWeight: "bold",
+                  marginBottom: "4px",
+                  fontSize: "13px",
+                  color: "#ccc"
+                }}>
+                  {key}
+                </div>
+                <div style={{
+                  color: "#ddd",
+                  wordBreak: "break-all" as const,
+                  fontFamily: "monospace",
+                  fontSize: "12px"
+                }}>
+                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* 미니언 인사이트 섹션 */}
-      <div style={{ 
-        marginBottom: 24,
-        border: "1px solid #E5E7EB",
-        borderRadius: 8,
-        overflow: "hidden"
+      <div style={{
+        fontSize: "15px",
+        fontWeight: "bold",
+        margin: "24px 0 12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
       }}>
-        <div style={{
-          width: "100%",
-          background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-          color: "white",
-          padding: "16px 20px",
-          fontSize: "16px",
-          fontWeight: "600",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
-        }}>
-          <span>🤖</span>
-          <span>미니언 인사이트</span>
-        </div>
+        미니언 인사이트
+      </div>
+      
+      <div style={{
+        backgroundColor: "#1e1e1e",
+        borderRadius: "10px",
+        padding: "16px",
+        fontSize: "13px",
+        lineHeight: "1.5",
+        color: "#ccc",
+        whiteSpace: "pre-line",
+        marginBottom: "24px"
+      }}>
+        {generateReport()}
         
-        <div style={{
-          background: "#FFFFFF",
-          padding: "20px",
-          borderTop: "1px solid #E5E7EB"
-        }}>
+        {/* To 주소 스캔 링크 */}
+        {actualTx.to && toExplorerUrl && (
           <div style={{
-            color: "#374151",
-            fontSize: "14px",
-            lineHeight: "1.6",
-            whiteSpace: "pre-line",
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            marginTop: "16px",
+            padding: "12px",
+            backgroundColor: "#333",
+            borderRadius: "8px",
+            border: "1px solid #555"
           }}>
-            {generateReport()}
-          </div>
-          
-          {/* To 주소 스캔 링크 */}
-          {actualTx.to && toExplorerUrl && (
             <div style={{
-              marginTop: "16px",
-              padding: "12px",
-              backgroundColor: "#F9FAFB",
-              borderRadius: "6px",
-              border: "1px solid #E5E7EB"
+              fontSize: "13px",
+              color: "#ccc",
+              marginBottom: "6px",
+              fontWeight: "bold"
             }}>
-              <div style={{
-                fontSize: "13px",
-                color: "#6B7280",
-                marginBottom: "6px",
-                fontWeight: "600"
-              }}>
-                📍 받는 주소 상세 정보
-              </div>
-              <a
-                href={toExplorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: "14px",
-                  color: "#059669",
-                  textDecoration: "none",
-                  fontWeight: "600",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.textDecoration = "underline";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.textDecoration = "none";
-                }}
-              >
-                {actualTx.to.slice(0, 6)}...{actualTx.to.slice(-4)} 블록 익스플로러에서 보기 →
-              </a>
+              📍 받는 주소 상세 정보
             </div>
-          )}
-        </div>
+            <a
+              href={toExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: "13px",
+                color: "#00d16c",
+                textDecoration: "none"
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.textDecoration = "underline";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.textDecoration = "none";
+              }}
+            >
+              {actualTx.to.slice(0, 6)}...{actualTx.to.slice(-4)} 블록 익스플로러에서 보기 →
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Raw 데이터 섹션 */}
-      <div style={{ 
-        marginBottom: 24,
-        border: "1px solid #E5E7EB",
-        borderRadius: 8,
-        overflow: "hidden"
+      <div style={{
+        fontSize: "15px",
+        fontWeight: "bold",
+        margin: "24px 0 12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+      }}>
+        Raw Transaction Data
+      </div>
+      
+      <div style={{
+        backgroundColor: "#1e1e1e",
+        borderRadius: "10px",
+        padding: "16px",
+        marginBottom: "24px"
       }}>
         <div style={{
-          width: "100%",
-          background: "linear-gradient(135deg, #6B7280 0%, #4B5563 100%)",
-          color: "white",
-          padding: "16px 20px",
-          fontSize: "16px",
-          fontWeight: "600",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
+          backgroundColor: "#333",
+          borderRadius: "8px",
+          padding: "10px",
+          fontFamily: "monospace",
+          fontSize: "12px",
+          color: "#ddd",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all",
+          overflowX: "auto",
+          overflowY: "auto",
+          maxHeight: "300px"
         }}>
-          <span>📄</span>
-          <span>Raw Transaction Data</span>
-        </div>
-        
-        <div style={{
-          background: "#FFFFFF",
-          padding: "20px",
-          borderTop: "1px solid #E5E7EB"
-        }}>
-          <pre style={{ 
-            background: "#F9FAFB", 
-            padding: "16px", 
-            borderRadius: "6px", 
-            fontSize: "11px", 
-            margin: 0, 
-            overflowX: "auto",
-            overflowY: "auto",
-            border: "1px solid #E5E7EB",
-            fontFamily: "monospace",
-            lineHeight: 1.4,
-            color: "#374151",
-            whiteSpace: "pre",
-            maxHeight: "300px"
-          }}>
-            {JSON.stringify(tx, null, 2)}
-          </pre>
+          {JSON.stringify(tx, null, 2)}
         </div>
       </div>
 
-
-
-      {/* 하단 닫기 버튼만 유지 */}
+      {/* 하단 정보 */}
       <div style={{ 
-        marginTop: 24, 
         textAlign: "center",
-        paddingTop: 16,
-        borderTop: "1px solid #E5E7EB"
+        fontSize: "12px",
+        color: "#777",
+        marginTop: "24px"
       }}>
-        <button
-          onClick={handleClose}
-          style={{
-            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            padding: "12px 24px",
-            fontSize: "14px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-            boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)"
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.3)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.2)";
-          }}
-        >
-          Close Transaction View
-        </button>
+        Web3 Minion - Transaction Analysis
       </div>
     </div>
   );
@@ -1164,15 +1100,18 @@ const App = () => (
       <TxInfo tx={tx} />
     ) : (
       <div style={{ 
-        padding: 24, 
+        padding: "16px", 
         textAlign: "center",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        fontFamily: "'Noto Sans KR', sans-serif",
+        background: "#000",
+        color: "white",
+        minHeight: "100vh"
       }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>❌</div>
+        <div style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>
           No Transaction Data
         </div>
-        <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>
+        <div style={{ fontSize: "14px", color: "#ccc", marginBottom: "24px" }}>
           트랜잭션 정보를 찾을 수 없습니다.
         </div>
         <button
@@ -1181,7 +1120,7 @@ const App = () => (
             background: "#6B7280",
             color: "white",
             border: "none",
-            borderRadius: "6px",
+            borderRadius: "8px",
             padding: "8px 16px",
             fontSize: "14px",
             cursor: "pointer"
