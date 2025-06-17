@@ -372,6 +372,52 @@ const determineAddressType = async (
   }
 };
 
+// 스캠 주소 확인 (CryptoScam.org 공식 API 사용)
+const checkScamAddress = async (address: string): Promise<{isScam: boolean, reportData: any}> => {
+  try {
+    console.log(`Checking if ${address} is a scam address using CryptoScam API...`);
+    
+    const apiUrl = `https://api.cryptoscam.org/v1/reports?page=1&rpp=20&searchAddress=${address}&sort=reportedAt:desc`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!response.ok) {
+      console.log('Failed to fetch scam check data from API');
+      return { isScam: false, reportData: null };
+    }
+    
+    const data = await response.json();
+    console.log('Scam API response:', data);
+    
+    // count가 0보다 크면 스캠 리포트가 존재함
+    const isScam = data.count > 0 && Array.isArray(data.items) && data.items.length > 0;
+    
+    if (isScam) {
+      console.log(`🚨 Scam detected for ${address}:`, {
+        reportCount: data.count,
+        scamType: data.items[0]?.scamType,
+        scamIndex: data.items[0]?.scamIndex,
+        reportedBy: data.items[0]?.reportedBy,
+        description: data.items[0]?.description?.substring(0, 100) + '...'
+      });
+    } else {
+      console.log(`✅ Address ${address} is clean - no scam reports found`);
+    }
+    
+    return { isScam, reportData: isScam ? data : null };
+  } catch (error) {
+    console.error('Error checking scam address via API:', error);
+    // 에러 발생시 안전하게 false 반환 (스캠이 아닌 것으로 처리)
+    return { isScam: false, reportData: null };
+  }
+};
+
 // 닫기 버튼 핸들러
 const handleClose = () => {
   window.close();
@@ -384,6 +430,9 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   const [decodedParams, setDecodedParams] = useState<{ name: string; type: string; value: any }[] | null>(null);
   // 주소 타입 상태
   const [addressType, setAddressType] = useState<string>("Loading...");
+  // 스캠 주소 확인 상태
+  const [isScamAddress, setIsScamAddress] = useState<boolean | null>(null);
+  const [scamCheckLoading, setScamCheckLoading] = useState<boolean>(false);
 
   
   // 실제 트랜잭션 데이터 추출 (params 배열의 첫 번째 요소가 실제 트랜잭션)
@@ -436,6 +485,26 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
     
     loadAddressType();
   }, [chainInfo, actualTx.to]);
+
+  // 스캠 주소 확인
+  useEffect(() => {
+    const checkScam = async () => {
+      if (actualTx.to && actualTx.to.startsWith('0x') && actualTx.to.length === 42) {
+        setScamCheckLoading(true);
+        try {
+          const result = await checkScamAddress(actualTx.to);
+          setIsScamAddress(result.isScam);
+        } catch (error) {
+          console.error('Error during scam check:', error);
+          setIsScamAddress(false);
+        } finally {
+          setScamCheckLoading(false);
+        }
+      }
+    };
+    
+    checkScam();
+  }, [actualTx.to]);
   
   // Raw 데이터에서 실제 존재하는 필드만 필터링
   const availableFields = Object.keys(fieldLabel).filter(key => {
@@ -457,6 +526,12 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
     const hasFunction = functionSignature && functionSignature !== "Loading..." && functionSignature !== "No function";
     
     let report = "";
+    
+    // 스캠 주소 경고 (가장 먼저 표시)
+    if (isScamAddress && toAddress) {
+      report += `🚨 극도로 위험합니다! ${toAddress.slice(0, 6)}...${toAddress.slice(-4)} 주소는 스캠으로 신고된 악성 주소입니다!\n\n`;
+      report += `⚠️ 이 트랜잭션을 절대 진행하지 마세요! 자산을 영구적으로 잃게 됩니다! CryptoScam.org에서 확인된 악성 주소입니다.\n\n`;
+    }
     
     // From 주소 분석
     if (fromAddress) {
@@ -580,7 +655,9 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
     }
     
     // 최종 요약 및 조언
-    if (addressType === "Contract" && hasFunction) {
+    if (isScamAddress) {
+      report += `🚨 요약: 스캠으로 신고된 악성 주소입니다. 어떤 상황에서도 이 트랜잭션을 진행하지 마세요! 자산을 영구적으로 잃을 위험이 매우 높습니다.`;
+    } else if (addressType === "Contract" && hasFunction) {
       report += `💡 요약: 스마트 컨트랙트와 상호작용하는 트랜잭션입니다. 컨트랙트가 신뢰할 수 있는지, 함수가 예상한 동작을 하는지 확인하신 후 진행하시는 것이 좋겠어요.`;
     } else if (hasValue && addressType === "Account") {
       report += `💡 요약: 일반적인 이더 전송 트랜잭션입니다. 받는 주소가 정확한지 마지막으로 한 번 더 확인해주세요. 블록체인에서는 실수로 보낸 자산을 되돌릴 수 없거든요.`;
@@ -702,6 +779,86 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
           </div>
         )}
       </div>
+
+      {/* 스캠 주소 경고 */}
+      {isScamAddress && (
+        <div style={{
+          backgroundColor: "#FEE2E2",
+          border: "2px solid #DC2626",
+          borderRadius: "8px",
+          padding: "16px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px"
+        }}>
+          <div style={{
+            fontSize: "24px",
+            color: "#DC2626"
+          }}>
+            🚨
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: "16px",
+              fontWeight: "700",
+              color: "#7F1D1D",
+              marginBottom: "4px"
+            }}>
+              ⚠️ SCAM ADDRESS DETECTED
+            </div>
+            <div style={{
+              fontSize: "14px",
+              color: "#991B1B",
+              marginBottom: "8px"
+            }}>
+              This address has been reported as a scam. Do not proceed with this transaction!
+            </div>
+            <a
+              href={`https://cryptoscam.org/reports?search=${actualTx.to}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: "13px",
+                color: "#DC2626",
+                textDecoration: "underline",
+                fontWeight: "600"
+              }}
+            >
+              View scam reports on CryptoScam.org →
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* 스캠 확인 로딩 상태 */}
+      {scamCheckLoading && (
+        <div style={{
+          backgroundColor: "#FEF3C7",
+          border: "1px solid #F59E0B",
+          borderRadius: "8px",
+          padding: "12px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          <div style={{
+            width: "16px",
+            height: "16px",
+            border: "2px solid #F59E0B",
+            borderTop: "2px solid transparent",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite"
+          }}></div>
+          <div style={{
+            fontSize: "14px",
+            color: "#92400E"
+          }}>
+            Checking address safety...
+          </div>
+        </div>
+      )}
 
       {/* 트랜잭션 정보 테이블 */}
       <div style={{ marginBottom: 24 }}>
