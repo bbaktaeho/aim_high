@@ -45,5 +45,10 @@
   "externally_connectable": {
     "matches": ["<all_urls>"]
   },
-  "icons": {}
+  "icons": {
+    "16": "images/gi0110.png",
+    "32": "images/gi0110.png",
+    "48": "images/gi0110.png",
+    "128": "images/gi0110.png"
+  }
 }
