@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface WelcomeScreenProps {
   onSubmit: (apiKey: string) => void;
@@ -8,6 +8,34 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorGif, setShowErrorGif] = useState(false);
+  const [isCheckingExistingKey, setIsCheckingExistingKey] = useState(true);
+
+  // 컴포넌트 마운트 시 기존 API 키 확인
+  useEffect(() => {
+    const checkExistingApiKey = async () => {
+      console.log('🔍 Checking for existing API key...');
+      
+      try {
+        const result = await chrome.storage.local.get(['noditApiKey']);
+        
+        if (result.noditApiKey && result.noditApiKey.length === 32) {
+          console.log('✅ Found existing valid API key, proceeding to MainScreen');
+          // 기존 API 키가 있으면 즉시 MainScreen으로 이동
+          onSubmit(result.noditApiKey);
+          return;
+        } else {
+          console.log('🆕 No valid API key found, showing WelcomeScreen');
+        }
+      } catch (error) {
+        console.error('❌ Error checking existing API key:', error);
+      }
+      
+      // API 키 확인 완료 - WelcomeScreen 표시
+      setIsCheckingExistingKey(false);
+    };
+
+    checkExistingApiKey();
+  }, [onSubmit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +65,49 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
   const handleApiKeyLinkClick = () => {
     chrome.tabs.create({ url: 'https://developer.nodit.io/docs/api-key' });
   };
+
+  // 기존 API 키 확인 중이면 로딩 화면 표시
+  if (isCheckingExistingKey) {
+    return (
+      <div style={{
+        width: '360px',
+        height: '580px',
+        fontFamily: "'Noto Sans KR', sans-serif",
+        backgroundColor: '#000',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+      }}>
+        <div style={{
+          width: '24px',
+          height: '24px',
+          border: '3px solid #333',
+          borderTop: '3px solid #00d16c',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
+        <span style={{
+          fontSize: '14px',
+          color: '#aaa',
+        }}>
+          초기화 중...
+        </span>
+        
+        {/* CSS Animation */}
+        <style>
+          {`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+      </div>
+    );
+  }
 
   return (
     <div style={{

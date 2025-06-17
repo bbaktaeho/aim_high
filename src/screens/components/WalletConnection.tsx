@@ -33,14 +33,17 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       padding: '16px',
       marginBottom: '16px',
     }}>
-      <div style={{
-        fontSize: '16px',
-        fontWeight: '600',
-        color: 'white',
-        marginBottom: '12px',
-      }}>
-        {isInitializing ? '지갑 상태 확인 중...' : account ? '연결된 지갑' : '지갑 연결하기'}
-      </div>
+      {/* 제목은 초기화 중이거나 미연결 상태일 때만 표시 */}
+      {!account && (
+        <div style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          color: 'white',
+          marginBottom: '12px',
+        }}>
+          {isInitializing ? '지갑 상태 확인 중...' : '지갑 연결하기'}
+        </div>
+      )}
 
       {/* 초기 로딩 중일 때 로딩 스피너 표시 */}
       {isInitializing ? (
