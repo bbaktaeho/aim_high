@@ -34,7 +34,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
   // Local state
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [noditApiKey, setNoditApiKey] = useState<string | null>(null);
-  
+
   // Load Nodit API key
   useEffect(() => {
     chrome.storage.local.get(['noditApiKey'], (result) => {

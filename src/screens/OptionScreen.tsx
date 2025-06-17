@@ -8,6 +8,7 @@ interface OptionScreenProps {
 export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) => {
   const [isEnabled, setIsEnabled] = React.useState<boolean>(false);
   const [isTransactionCheckerEnabled, setIsTransactionCheckerEnabled] = React.useState<boolean>(false);
+  const [isOnchainNotificationEnabled, setIsOnchainNotificationEnabled] = React.useState<boolean>(false);
   const [isResetting, setIsResetting] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
@@ -15,10 +16,11 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
 
   useEffect(() => {
     // Load extension state and API key
-    chrome.storage.local.get(['isEnabled', 'isTransactionCheckerEnabled', 'noditApiKey'], (result) => {
+    chrome.storage.local.get(['isEnabled', 'isTransactionCheckerEnabled', 'isOnchainNotificationEnabled', 'noditApiKey'], (result) => {
       console.log('Extension state loaded:', result);
       setIsEnabled(result.isEnabled ?? false);
       setIsTransactionCheckerEnabled(result.isTransactionCheckerEnabled ?? false);
+      setIsOnchainNotificationEnabled(result.isOnchainNotificationEnabled ?? false);
       setApiKey(result.noditApiKey || '');
     });
   }, []);
@@ -109,6 +111,13 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     } catch (error) {
       console.error('Error handling transaction Tracker script:', error);
     }
+  };
+
+  const handleOnchainNotificationToggle = async () => {
+    const newState = !isOnchainNotificationEnabled;
+    setIsOnchainNotificationEnabled(newState);
+    await chrome.storage.local.set({ isOnchainNotificationEnabled: newState });
+    console.log(`🔔 On-chain Notification state changed to: ${newState}`);
   };
 
   const handleCopyApiKey = async () => {
@@ -280,7 +289,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
                   내 계정의 온체인 활동이 감지되면 알려줍니다.
                 </p>
               </div>
-              <ToggleButton isActive={false} onClick={() => {}} />
+              <ToggleButton isActive={isOnchainNotificationEnabled} onClick={handleOnchainNotificationToggle} />
             </div>
 
             <div style={{

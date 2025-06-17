@@ -35,14 +35,14 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
     }}>
       {/* 제목은 초기화 중이거나 미연결 상태일 때만 표시 */}
       {!account && (
-        <div style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          color: 'white',
-          marginBottom: '12px',
-        }}>
+      <div style={{
+        fontSize: '16px',
+        fontWeight: '600',
+        color: 'white',
+        marginBottom: '12px',
+      }}>
           {isInitializing ? '지갑 상태 확인 중...' : '지갑 연결하기'}
-        </div>
+      </div>
       )}
 
       {/* 초기 로딩 중일 때 로딩 스피너 표시 */}
@@ -141,34 +141,34 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                     fontSize: '11px',
                     color: '#aaa',
                     fontWeight: '400',
-                  }}>
-                    {CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].name}
-                  </span>
-                </div>
-              )}
+              }}>
+                {CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].name}
+              </span>
+            </div>
+          )}
             </div>
             
             {/* 오른쪽: 연결 해제 아이콘 버튼 */}
-            <button
-              onClick={disconnectWallet}
-              style={{
+          <button
+            onClick={disconnectWallet}
+            style={{
                 background: 'none',
-                border: 'none',
-                cursor: 'pointer',
+              border: 'none',
+              cursor: 'pointer',
                 padding: '8px',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'background-color 0.2s ease',
+              transition: 'background-color 0.2s ease',
                 color: '#ef4444',
-              }}
-              onMouseOver={(e) => {
+            }}
+            onMouseOver={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-              }}
-              onMouseOut={(e) => {
+            }}
+            onMouseOut={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+            }}
               title="연결 해제"
             >
               {/* 연결 해제 아이콘 (체인 끊어짐) */}
@@ -178,7 +178,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                 <path d="M8 11h8v2H8v-2Z" fill="currentColor"/>
                 <path d="M19 3L5 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-            </button>
+          </button>
           </div>
         </>
       ) : (
@@ -276,7 +276,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                     ⚠️ 연결 오류
                   </div>
                   <div style={{ fontSize: '12px' }}>
-                    {error}
+              {error}
                   </div>
                   <div style={{ 
                     fontSize: '12px', 

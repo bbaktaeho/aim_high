@@ -12,6 +12,7 @@ module.exports = {
     "page-script": "./src/page-script.ts",
     transaction: "./src/transaction.tsx",
     "transaction-checker": "./src/transaction-checker.ts",
+    "onchain-notification": "./src/onchain-notification.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

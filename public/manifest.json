@@ -23,6 +23,12 @@
       "js": ["metamask-content.js"],
       "run_at": "document_idle",
       "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["onchain-notification.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "content_security_policy": {
@@ -39,6 +45,10 @@
     },
     {
       "resources": ["page-script.js"],
+      "matches": ["<all_urls>"]
+    },
+    {
+      "resources": ["images/character.gif"],
       "matches": ["<all_urls>"]
     }
   ],

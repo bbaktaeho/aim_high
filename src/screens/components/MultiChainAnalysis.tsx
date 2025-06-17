@@ -257,7 +257,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
       }, 2000);
     } catch (error) {
       console.error('복사 실패:', error);
-    }
+  }
   };
 
   // 탭 데이터 렌더링
@@ -265,8 +265,8 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
     const currentData = data[activeTab];
     
     if (!currentData || currentData.length === 0) {
-      return (
-        <div style={{
+  return (
+          <div style={{
           padding: '20px',
           textAlign: 'center',
           color: '#666',
@@ -323,7 +323,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                   hour: '2-digit',
                   minute: '2-digit'
                 })}
-              </div>
+            </div>
               
               <div style={{
                 display: 'flex',
@@ -360,20 +360,20 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                       fontWeight: '500',
                       transition: 'all 0.2s ease',
                       opacity: copiedHashes.has(item.transactionHash || item.hash) ? 1 : 1
-                    }}
+              }}
                     onMouseEnter={(e) => {
                       if (!copiedHashes.has(item.transactionHash || item.hash)) {
                         e.currentTarget.style.backgroundColor = networkColor + '20';
-                      }
-                    }}
+                }
+              }}
                     onMouseLeave={(e) => {
                       if (!copiedHashes.has(item.transactionHash || item.hash)) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
                     {copiedHashes.has(item.transactionHash || item.hash) ? '✅ 복사됨' : '📋 Hash'}
-                  </button>
+            </button>
                 )}
                 
                 {/* 송신/수신 표시 */}
@@ -391,7 +391,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                   {item.from?.toLowerCase() === account?.account.toLowerCase() ? '↗️ 송신' : '↙️ 수신'}
                 </div>
               </div>
-            </div>
+          </div>
           
             {/* 중간: 주소 정보 */}
             <div style={{
@@ -414,7 +414,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                     {formatAddress(item.from)}
                   </span>
                 </div>
-                <div style={{
+              <div style={{
                   fontSize: '10px', 
                   color: '#ccc',
                   display: 'flex',
@@ -647,15 +647,15 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                     {network.icon}
                   </div>
                   <div>
-                    <div style={{
+              <div style={{
                       fontSize: '13px',
                       fontWeight: '600',
-                      color: 'white',
+                color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
                       marginBottom: '2px'
-                    }}>
+              }}>
                       {network.name}
                       {isConnected && (
                         <span style={{
@@ -678,8 +678,8 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                           TEST
                         </span>
                       )}
-                    </div>
-                    <div style={{
+              </div>
+              <div style={{
                       fontSize: '10px', 
                       color: '#888',
                       display: 'flex',
@@ -691,7 +691,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                         <span style={{
                           fontSize: '9px',
                           backgroundColor: '#333',
-                          color: '#aaa',
+                color: '#aaa',
                           padding: '1px 3px',
                           borderRadius: '2px'
                         }}>
@@ -722,18 +722,18 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                     borderBottom: '1px solid #222'
                   }}>
                     {(['transactions', 'tokens', 'nfts'] as TabType[]).map((tab) => (
-                      <button
+              <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        style={{
+                style={{
                           flex: 1,
                           padding: '10px 8px',
                           backgroundColor: activeTab === tab ? network.color + '15' : 'transparent',
                           color: activeTab === tab ? network.color : '#888',
-                          border: 'none',
+                  border: 'none',
                           fontSize: '11px',
                           fontWeight: '600',
-                          cursor: 'pointer',
+                  cursor: 'pointer',
                           borderBottom: activeTab === tab ? `2px solid ${network.color}` : '2px solid transparent',
                           transition: 'all 0.2s ease',
                           display: 'flex',
@@ -761,7 +761,7 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                             {data[tab].length}
                           </span>
                         )}
-                      </button>
+              </button>
                     ))}
                   </div>
 
@@ -802,9 +802,9 @@ export const MultiChainAnalysis: React.FC<MultiChainAnalysisProps> = ({ account,
                       </div>
                     )}
                   </div>
-                </div>
-              )}
             </div>
+          )}
+        </div>
           );
         })}
       </div>
