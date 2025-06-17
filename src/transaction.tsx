@@ -64,6 +64,35 @@ const getNetworkName = (chainId: string): string => {
   }
 };
 
+// 체인별 블록 익스플로러 URL 매핑
+const getExplorerUrl = (chainId: string, address: string): string | null => {
+  if (!chainId || !address) return null;
+  
+  try {
+    const chainIdNumber = parseInt(chainId, 16);
+    
+    const explorerMap: Record<number, string> = {
+      1: "https://etherscan.io/address/", // Ethereum Mainnet
+      137: "https://polygonscan.com/address/", // Polygon
+      10: "https://optimistic.etherscan.io/address/", // Optimism
+      8453: "https://basescan.org/address/", // Base
+      42161: "https://arbiscan.io/address/", // Arbitrum One
+      8217: "https://kaiascan.io/address/", // Kaia (Klaytn)
+      11155111: "https://sepolia.etherscan.io/address/", // Sepolia Testnet
+      80002: "https://amoy.polygonscan.com/address/", // Polygon Amoy Testnet
+      421614: "https://sepolia.arbiscan.io/address/", // Arbitrum Sepolia
+      84532: "https://sepolia.basescan.org/address/", // Base Sepolia
+      11155420: "https://sepolia-optimism.etherscan.io/address/", // OP Sepolia
+      1001: "https://baobab.klaytnscope.com/account/" // Kaia Testnet (Baobab)
+    };
+    
+    const explorerBase = explorerMap[chainIdNumber];
+    return explorerBase ? explorerBase + address : null;
+  } catch {
+    return null;
+  }
+};
+
 // 트랜잭션 타입 설명
 const getTransactionType = (type: string): string => {
   const types: Record<string, string> = {
@@ -452,6 +481,9 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   
   const chainInfo = getChainInfo(chainId);
   
+  // To 주소 블록 익스플로러 URL
+  const toExplorerUrl = actualTx.to ? getExplorerUrl(chainId, actualTx.to) : null;
+  
   // 함수 시그니처 조회
   useEffect(() => {
     const loadFunctionSignature = async () => {
@@ -524,6 +556,8 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
     const hasValue = value && value !== "0x0" && value !== "0";
     const hasData = data && data !== "0x" && data.length > 2;
     const hasFunction = functionSignature && functionSignature !== "Loading..." && functionSignature !== "No function";
+    
+
     
     let report = "";
     
@@ -991,6 +1025,48 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
           }}>
             {generateReport()}
           </div>
+          
+          {/* To 주소 스캔 링크 */}
+          {actualTx.to && toExplorerUrl && (
+            <div style={{
+              marginTop: "16px",
+              padding: "12px",
+              backgroundColor: "#F9FAFB",
+              borderRadius: "6px",
+              border: "1px solid #E5E7EB"
+            }}>
+              <div style={{
+                fontSize: "13px",
+                color: "#6B7280",
+                marginBottom: "6px",
+                fontWeight: "600"
+              }}>
+                📍 받는 주소 상세 정보
+              </div>
+              <a
+                href={toExplorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: "14px",
+                  color: "#059669",
+                  textDecoration: "none",
+                  fontWeight: "600",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.textDecoration = "underline";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.textDecoration = "none";
+                }}
+              >
+                {actualTx.to.slice(0, 6)}...{actualTx.to.slice(-4)} 블록 익스플로러에서 보기 →
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
