@@ -384,6 +384,7 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
   const [decodedParams, setDecodedParams] = useState<{ name: string; type: string; value: any }[] | null>(null);
   // 주소 타입 상태
   const [addressType, setAddressType] = useState<string>("Loading...");
+
   
   // 실제 트랜잭션 데이터 추출 (params 배열의 첫 번째 요소가 실제 트랜잭션)
   const actualTx = tx.params && Array.isArray(tx.params) && tx.params.length > 0 ? tx.params[0] : tx;
@@ -444,6 +445,153 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
     // 다른 필드들은 빈 값이면 제외
     return actualTx[key] !== "" && actualTx[key] !== "0x0";
   });
+
+  // 리포트 생성 함수
+  const generateReport = (): string => {
+    const fromAddress = actualTx.from;
+    const toAddress = actualTx.to;
+    const value = actualTx.value;
+    const data = actualTx.data;
+    const hasValue = value && value !== "0x0" && value !== "0";
+    const hasData = data && data !== "0x" && data.length > 2;
+    const hasFunction = functionSignature && functionSignature !== "Loading..." && functionSignature !== "No function";
+    
+    let report = "";
+    
+    // From 주소 분석
+    if (fromAddress) {
+      report += `🔐 ${fromAddress.slice(0, 6)}...${fromAddress.slice(-4)} 지갑에서 트랜잭션을 시작하셨네요. 이 주소가 서명자이자 수수료를 지불하는 계정입니다.\n\n`;
+    }
+    
+    // To 주소와 Value 분석
+    if (toAddress) {
+      const shortToAddress = `${toAddress.slice(0, 6)}...${toAddress.slice(-4)}`;
+      
+      if (hasValue) {
+        const valueInWei = value;
+        report += `💰 ${shortToAddress}에게 ${valueInWei} Wei를 전송하고 계시네요. `;
+      } else {
+        report += `📤 ${shortToAddress}와 상호작용하려고 하시는군요. `;
+      }
+      
+      // 주소 타입에 따른 상세 분석
+      if (addressType === "Contract") {
+        report += `받는 주소를 확인해보니 스마트 컨트랙트입니다.\n\n`;
+        
+        if (hasFunction) {
+          const mainFunction = functionSignature.split('\n')[0];
+          report += `🚀 컨트랙트의 "${mainFunction}" 함수를 호출하려고 하시는군요. `;
+          
+          // 함수별 특별한 설명
+          if (mainFunction.includes('transfer')) {
+            report += `토큰 전송 기능을 사용하시는 것 같아요.\n\n`;
+          } else if (mainFunction.includes('approve')) {
+            report += `토큰 사용 권한을 부여하는 기능이네요.\n\n`;
+          } else if (mainFunction.includes('swap')) {
+            report += `토큰 교환 기능을 사용하시는군요.\n\n`;
+          } else {
+            report += `이 함수의 정확한 기능은 컨트랙트 문서를 확인해보시는 것이 좋겠어요.\n\n`;
+          }
+        } else if (hasData) {
+          report += `데이터가 포함되어 있지만 함수 시그니처를 식별할 수 없네요. 알려지지 않은 함수이거나 새로운 컨트랙트일 수 있습니다.\n\n`;
+        } else {
+          report += `단순히 이더를 컨트랙트로 전송하는 것 같아요. 컨트랙트의 fallback 함수가 실행될 예정입니다.\n\n`;
+        }
+        
+      } else if (addressType === "Delegation") {
+        report += `받는 주소를 확인해보니 위임 계정(Delegation)이네요.\n\n`;
+        
+        if (hasFunction) {
+          const mainFunction = functionSignature.split('\n')[0];
+          report += `🎭 흥미롭게도 일반 사용자 지갑 형태인데 "${mainFunction}" 함수를 호출하려고 하시는군요. 이는 EIP-3074나 다른 위임 메커니즘을 사용하는 특별한 계정일 가능성이 높습니다.\n\n`;
+        } else if (hasData) {
+          report += `🤔 위임 계정에 데이터를 전송하고 있지만 함수를 식별할 수 없네요. 특별한 프로토콜을 사용하는 것일 수도 있어요.\n\n`;
+        } else {
+          report += `위임된 계정으로 단순 전송을 하고 계시네요.\n\n`;
+        }
+        
+      } else if (addressType === "Account") {
+        report += `받는 주소를 확인해보니 일반 사용자 지갑입니다.\n\n`;
+        
+        if (hasData && !hasValue) {
+          report += `🤔 조금 의아한 점이 있어요. 일반 사용자 지갑에 데이터를 전송하고 있는데, 보통 사용자 지갑은 데이터를 처리하지 않거든요. 혹시 받는 주소가 정말 일반 지갑이 맞는지 다시 한번 확인해보세요.\n\n`;
+        } else if (hasData && hasValue) {
+          report += `🤔 일반 사용자 지갑에 이더와 함께 데이터도 전송하고 있네요. 이는 다소 특이한 패턴입니다. 받는 지갑이 이 데이터를 어떻게 처리할지 확실하지 않아요.\n\n`;
+        } else if (hasValue) {
+          report += `👤 일반적인 개인 간 이더 전송이네요. 가장 기본적이고 안전한 트랜잭션 형태입니다.\n\n`;
+        } else {
+          report += `🤷‍♂️ 일반 지갑에 값도 데이터도 없이 트랜잭션을 보내고 있네요. 이는 매우 드문 경우인데, 특별한 목적이 있으실까요?\n\n`;
+        }
+      } else {
+        report += `주소 타입을 확인하는 중이에요...\n\n`;
+      }
+    }
+    
+    // 함수 호출 상세 분석
+    if (hasFunction && decodedParams && decodedParams.length > 0) {
+      report += `📋 함수 파라미터를 자세히 살펴보면:\n`;
+      decodedParams.forEach((param, index) => {
+        let displayValue = param.value;
+        if (typeof param.value === 'bigint') {
+          displayValue = param.value.toString();
+        } else if (typeof param.value === 'object' && param.value !== null) {
+          displayValue = JSON.stringify(param.value);
+        }
+        
+        // 파라미터별 친근한 설명
+        if (param.type === 'address') {
+          const shortAddr = displayValue.length > 10 ? `${displayValue.slice(0, 6)}...${displayValue.slice(-4)}` : displayValue;
+          report += `   ${index + 1}. ${param.name}: ${shortAddr} - 블록체인 주소에요\n`;
+        } else if (param.type === 'uint256' && param.name === 'amount') {
+          report += `   ${index + 1}. ${param.name}: ${displayValue} - 토큰 수량입니다 (Wei 단위)\n`;
+        } else if (param.type.includes('uint')) {
+          report += `   ${index + 1}. ${param.name}: ${displayValue} - 숫자 값이에요\n`;
+        } else if (param.type === 'bool') {
+          report += `   ${index + 1}. ${param.name}: ${displayValue} - 참/거짓 값입니다\n`;
+        } else if (param.type === 'string') {
+          report += `   ${index + 1}. ${param.name}: "${displayValue}" - 텍스트 데이터에요\n`;
+        } else {
+          report += `   ${index + 1}. ${param.name}: ${displayValue} (${param.type} 타입)\n`;
+        }
+      });
+      report += `\n`;
+    } else if (hasFunction && functionSignature !== "Loading...") {
+      const mainFunction = functionSignature.split('\n')[0];
+      report += `🔧 호출하려는 함수: "${mainFunction}"\n`;
+      if (!decodedParams || decodedParams.length === 0) {
+        report += `이 함수는 파라미터가 없거나 파라미터 디코딩에 실패했어요.\n\n`;
+      }
+    }
+    
+    // Gas 정보 (있는 경우)
+    if (actualTx.gasPrice || actualTx.maxFeePerGas) {
+      const gasPrice = actualTx.gasPrice || actualTx.maxFeePerGas;
+      const gasPriceGwei = weiToGwei(gasPrice);
+      report += `⛽ 가스 비용: ${gasPriceGwei} Gwei로 설정하셨네요. `;
+      
+      const gasPriceNum = parseFloat(gasPriceGwei);
+      if (gasPriceNum > 100) {
+        report += `다소 높은 가스 가격이에요. 빠른 처리를 원하시는군요!\n\n`;
+      } else if (gasPriceNum > 50) {
+        report += `적당한 가스 가격이네요.\n\n`;
+      } else {
+        report += `경제적인 가스 가격을 선택하셨어요. 처리 시간이 조금 걸릴 수 있어요.\n\n`;
+      }
+    }
+    
+    // 최종 요약 및 조언
+    if (addressType === "Contract" && hasFunction) {
+      report += `💡 요약: 스마트 컨트랙트와 상호작용하는 트랜잭션입니다. 컨트랙트가 신뢰할 수 있는지, 함수가 예상한 동작을 하는지 확인하신 후 진행하시는 것이 좋겠어요.`;
+    } else if (hasValue && addressType === "Account") {
+      report += `💡 요약: 일반적인 이더 전송 트랜잭션입니다. 받는 주소가 정확한지 마지막으로 한 번 더 확인해주세요. 블록체인에서는 실수로 보낸 자산을 되돌릴 수 없거든요.`;
+    } else if (addressType === "Account" && hasData) {
+      report += `💡 요약: 일반 지갑에 데이터를 전송하는 특이한 트랜잭션이에요. 정말 의도한 것이 맞는지 다시 한번 확인해보시길 권해드려요.`;
+    } else {
+      report += `💡 요약: 트랜잭션 내용을 꼼꼼히 검토하셨다면 안전하게 진행하세요. 궁금한 점이 있다면 더 자세히 조사해보시는 것도 좋은 방법이에요.`;
+    }
+    
+    return report;
+  };
 
   return (
     <div style={{ 
@@ -650,6 +798,45 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
         </table>
       </div>
 
+      {/* 미니언 인사이트 섹션 */}
+      <div style={{ 
+        marginBottom: 24,
+        border: "1px solid #E5E7EB",
+        borderRadius: 8,
+        overflow: "hidden"
+      }}>
+        <div style={{
+          width: "100%",
+          background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+          color: "white",
+          padding: "16px 20px",
+          fontSize: "16px",
+          fontWeight: "600",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          <span>🤖</span>
+          <span>미니언 인사이트</span>
+        </div>
+        
+        <div style={{
+          background: "#FFFFFF",
+          padding: "20px",
+          borderTop: "1px solid #E5E7EB"
+        }}>
+          <div style={{
+            color: "#374151",
+            fontSize: "14px",
+            lineHeight: "1.6",
+            whiteSpace: "pre-line",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          }}>
+            {generateReport()}
+          </div>
+        </div>
+      </div>
+
       {/* Raw 데이터 섹션 */}
       <div style={{ 
         background: "#F3F4F6", 
@@ -685,6 +872,8 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
           {JSON.stringify(tx, null, 2)}
         </pre>
       </div>
+
+
 
       {/* 하단 닫기 버튼만 유지 */}
       <div style={{ 
