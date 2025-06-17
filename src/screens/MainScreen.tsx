@@ -18,6 +18,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
     isMetaMaskInstalled,
     isContentScriptReady,
     isRequestPending,
+    isInitializing,
     initializeMetaMask,
     connectWallet,
     disconnectWallet,
@@ -44,14 +45,29 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
     });
   }, []);
 
-  // Initialize MetaMask when component mounts (only once)
+  // Initialize MetaMask when component mounts (only once) - after storage loading is complete
   useEffect(() => {
-    if (!isInitializedRef.current) {
-      console.log('🚀 Initializing MetaMask on component mount (first time only)');
+    if (!isInitializedRef.current && !isInitializing) {
+      console.log('🚀 [MainScreen] Initializing MetaMask after storage load complete');
       isInitializedRef.current = true;
-      initializeMetaMask();
+      
+      // 약간의 지연 후 초기화 (storage 로드 완료 보장)
+      setTimeout(() => {
+        initializeMetaMask();
+      }, 100);
     }
-  }, [initializeMetaMask]);
+  }, [initializeMetaMask, isInitializing]);
+
+  // Debug: Log connection state changes
+  useEffect(() => {
+    console.log('🔄 [MainScreen] Connection state changed:', {
+      account,
+      chainId,
+      isConnecting,
+      error,
+      isMetaMaskInstalled,
+    });
+  }, [account, chainId, isConnecting, error, isMetaMaskInstalled]);
 
   // Transaction data listener
   useEffect(() => {
@@ -153,6 +169,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
             isConnecting={isConnecting}
             error={error}
             isMetaMaskInstalled={isMetaMaskInstalled}
+            isInitializing={isInitializing}
+            isRequestPending={isRequestPending}
             connectWallet={connectWallet}
             disconnectWallet={disconnectWallet}
           />
