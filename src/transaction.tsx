@@ -730,7 +730,7 @@ const TxInfo: React.FC<{ tx: any }> = ({ tx }) => {
           transform: "translateX(-50%)",
           fontWeight: "bold"
         }}>
-          🚀 트랜잭션 세부정보
+          트랜잭션 세부정보
         </div>
         <span
           onClick={handleClose}
