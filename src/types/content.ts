@@ -64,7 +64,6 @@ export interface NoditAPIOperation {
 
 // API operation types
 export type APIOperationId =
-  | "getAccountStats"
   | "getTokensOwnedByAccount"
   | "getAssetsOwnedByAccount"
   | "getNativeBalanceByAccount"

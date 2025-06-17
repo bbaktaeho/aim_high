@@ -7,12 +7,29 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorGif, setShowErrorGif] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
+    // 2초 대기
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // API 키 길이 검증 (32자리)
+    if (apiKey.length !== 32) {
+      setIsLoading(false);
+      setShowErrorGif(true);
+      
+      // 3초 후 에러 GIF 제거
+      setTimeout(() => {
+        setShowErrorGif(false);
+      }, 3000);
+      
+      return;
+    }
+    
+    // 길이가 맞으면 진행
     await chrome.storage.local.set({ noditApiKey: apiKey });
     onSubmit(apiKey);
   };
@@ -71,7 +88,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
           marginBottom: '40px',
         }}>
           <img 
-            src="/images/character.gif" // GIF 파일 경로
+            src={showErrorGif ? "/images/character_err.gif" : "/images/character.gif"} // 에러 상태에 따라 GIF 변경
             alt="Character"
             style={{
               width: '200px',

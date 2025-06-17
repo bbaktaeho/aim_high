@@ -6,9 +6,6 @@ import { APIOperationId } from "../types/content";
  */
 const transformRequestBody = (operationId: APIOperationId, requestBody: any): any => {
   switch (operationId) {
-    case "getAccountStats":
-      return { address: requestBody.account };
-
     case "getTokensOwnedByAccount":
       return {
         accountAddress: requestBody.account,

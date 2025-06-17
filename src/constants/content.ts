@@ -45,7 +45,6 @@ export const API_CONFIG = {
 
 // API path mappings
 export const API_PATHS: Record<APIOperationId, string> = {
-  getAccountStats: "stats/getAccountStats",
   getTokensOwnedByAccount: "token/getTokensOwnedByAccount",
   getAssetsOwnedByAccount: "asset/getAssetsOwnedByAccount",
   getNativeBalanceByAccount: "native/getNativeBalanceByAccount",

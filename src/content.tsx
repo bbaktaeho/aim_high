@@ -52,7 +52,36 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
     
     if (address.startsWith('T') && address.length === 34) {
       addressType = 'tron';
-      activeNetworks = [{ protocol: 'tron', network: 'mainnet' }];
+      
+      // Tron 주소인 경우 먼저 트랜잭션 개수 확인
+      try {
+        const tronTransactionCountResult = await callNoditAPI('tron', 'mainnet', 'getTotalTransactionCountByAccount', { account: address }, apiKey);
+        const transactionCount = tronTransactionCountResult?.transactionCount || 0;
+        
+        if (transactionCount > 0) {
+          activeNetworks = [{ protocol: 'tron', network: 'mainnet' }];
+        } else {
+          contentDiv.innerHTML = `
+            <div style="color: #6B7280; text-align: center; padding: 20px;">
+              <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+              <div style="font-weight: 500; margin-bottom: 4px;">No Transaction History</div>
+              <div style="font-size: 12px;">This address has no recorded transactions on Tron network.</div>
+            </div>
+          `;
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking Tron transaction count:', error);
+        contentDiv.innerHTML = `
+          <div style="color: #EF4444; font-weight: 500;">
+            ❌ Failed to check Tron transactions
+          </div>
+          <div style="color: #6B7280; font-size: 12px; margin-top: 4px;">
+            ${error instanceof Error ? error.message : 'Unknown error occurred'}
+          </div>
+        `;
+        return;
+      }
     } else if (address.startsWith('0x') && address.length === 42) {
       addressType = 'evm';
       // EVM 멀티체인 목록 (Nodit 지원 체인)
@@ -65,7 +94,7 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
         { protocol: 'kaia', network: 'mainnet' }
       ];
       
-      // 2. EVM 주소라면 각 체인에서 getAccountStats 먼저 호출하여 활성 체인 확인
+      // 2. EVM 주소라면 각 체인에서 getTotalTransactionCountByAccount 먼저 호출하여 활성 체인 확인
       contentDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px; color: #6B7280;">
           <div style="width: 16px; height: 16px; border: 2px solid #E5E7EB; border-top: 2px solid #10B981; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -79,47 +108,31 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
         </style>
       `;
       
-      const accountStatsPromises = evmChains.map(chain => 
-        callNoditAPI(chain.protocol, chain.network, 'getAccountStats', { account: address }, apiKey)
+      const transactionCountPromises = evmChains.map(chain => 
+        callNoditAPI(chain.protocol, chain.network, 'getTotalTransactionCountByAccount', { account: address }, apiKey)
           .then(result => {
-            console.log(`✅ ${chain.protocol}-${chain.network} getAccountStats success:`, result);
-            return { ...chain, result, hasActivity: true };
+            console.log(`✅ ${chain.protocol}-${chain.network} getTotalTransactionCountByAccount success:`, result);
+            const transactionCount = result?.transactionCount || 0;
+            return { ...chain, result, transactionCount, hasActivity: transactionCount > 0 };
           })
           .catch(error => {
-            console.log(`❌ ${chain.protocol}-${chain.network} getAccountStats failed:`, error);
-            return { ...chain, result: null, hasActivity: false };
+            console.log(`❌ ${chain.protocol}-${chain.network} getTotalTransactionCountByAccount failed:`, error);
+            return { ...chain, result: null, transactionCount: 0, hasActivity: false };
           })
       );
       
-      const accountStatsResults = await Promise.all(accountStatsPromises);
-      console.log('📊 All account stats results:', accountStatsResults);
+      const transactionCountResults = await Promise.all(transactionCountPromises);
+      console.log('📊 All transaction count results:', transactionCountResults);
       
-             // 3. 활동이 있는 체인만 필터링 (더 관대한 조건)
-       activeNetworks = accountStatsResults.filter(chain => {
-         if (!chain.result) return false;
-         
-         // API 호출이 성공했고 데이터가 있는지 확인
-         if (chain.result.items) {
-           const stats = chain.result.items;
-           // 어떤 활동이라도 있으면 포함 (더 관대한 조건)
-           const hasActivity = (stats.transactionCounts && (stats.transactionCounts.external > 0 || stats.transactionCounts.internal > 0)) || 
-                  (stats.transferCounts && (stats.transferCounts.tokens > 0 || stats.transferCounts.nfts > 0 || stats.transferCounts.native > 0)) ||
-                  (stats.assets && (stats.assets.tokens > 0 || stats.assets.nfts > 0)) ||
-                  // 네이티브 잔고가 있어도 포함
-                  (stats.balances && stats.balances.native && parseFloat(stats.balances.native) > 0);
-           
-           console.log(`🔍 ${chain.protocol}-${chain.network} activity check:`, {
-             stats,
-             hasActivity
-           });
-           
-           return hasActivity;
-         }
-         
-         // API 호출은 성공했지만 데이터가 없는 경우도 포함 (주소가 유효할 수 있음)
-         console.log(`⚠️ ${chain.protocol}-${chain.network} API success but no items`);
-         return true;
-       });
+      // 3. 트랜잭션이 있는 체인만 필터링
+      activeNetworks = transactionCountResults.filter(chain => {
+        console.log(`🔍 ${chain.protocol}-${chain.network} transaction check:`, {
+          transactionCount: chain.transactionCount,
+          hasActivity: chain.hasActivity
+        });
+        
+        return chain.hasActivity;
+      });
       
       console.log('🔍 Active networks found:', activeNetworks);
       
@@ -162,7 +175,6 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
     // 각 활성 네트워크에 대해 상세 정보 수집
     const networkAnalysisPromises = activeNetworks.map(async (network) => {
       let promises: Promise<any>[] = [
-        callNoditAPI(network.protocol, network.network, 'getAccountStats', { account: address }, apiKey),
         callNoditAPI(network.protocol, network.network, 'getTokensOwnedByAccount', { account: address, rpp: 10, withCount: true }, apiKey),
         callNoditAPI(network.protocol, network.network, 'getNativeBalanceByAccount', { account: address }, apiKey),
         callNoditAPI(network.protocol, network.network, 'getTotalTransactionCountByAccount', { account: address }, apiKey)
@@ -180,24 +192,23 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
 
       const results = await Promise.allSettled(promises);
       
-      // 결과를 명시적으로 인덱스로 처리
-      const accountStatsResult = results[0];
-      const tokenBalancesResult = results[1];
-      const nativeBalanceResult = results[2];
-      const transactionCountResult = results[3];
+      // 결과를 명시적으로 인덱스로 처리 (getAccountStats 제거로 인덱스 조정)
+      const tokenBalancesResult = results[0];
+      const nativeBalanceResult = results[1];
+      const transactionCountResult = results[2];
       
       let assetBalancesResult = null;
       let ensResult = null;
       
       // Tron의 경우 TRC-10 에셋 결과 처리
       if (network.protocol === 'tron') {
-        assetBalancesResult = results[4];
+        assetBalancesResult = results[3];
         // 이더리움 메인넷이면서 Tron인 경우는 없으므로 ENS는 처리하지 않음
       }
       
       // 이더리움 메인넷의 경우 ENS 결과 처리
       if (network.protocol === 'ethereum' && network.network === 'mainnet') {
-        ensResult = results[4]; // Tron이 아닌 이더리움 메인넷의 경우
+        ensResult = results[3]; // Tron이 아닌 이더리움 메인넷의 경우
         console.log(`🏷️ ENS result for ${network.protocol}-${network.network}:`, ensResult);
       }
 
@@ -227,7 +238,6 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
 
       return {
         ...network,
-        accountStats: accountStatsResult.status === 'fulfilled' ? accountStatsResult.value : null,
         tokenBalances: tokenBalancesResult.status === 'fulfilled' ? tokenBalancesResult.value : null,
         assetBalances: network.protocol === 'tron' && assetBalancesResult && assetBalancesResult.status === 'fulfilled' ? assetBalancesResult.value : null,
         nativeBalance: nativeBalanceResult.status === 'fulfilled' ? nativeBalanceResult.value : null,
@@ -239,37 +249,11 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
     const networkAnalysisResults = await Promise.all(networkAnalysisPromises);
     console.log('🎯 Final network analysis results:', networkAnalysisResults);
 
-    // 트랜잭션 카운트가 있는 네트워크만 필터링
-    const networksWithTransactions = networkAnalysisResults.filter(network => {
-      const transactionCount = network.transactionCount?.transactionCount;
-      const hasTransactions = transactionCount && transactionCount > 0;
-      
-      console.log(`🔍 ${network.protocol}-${network.network} transaction check:`, {
-        transactionCount,
-        hasTransactions
-      });
-      
-      return hasTransactions;
-    });
-
-    console.log('🎯 Networks with transactions:', networksWithTransactions);
-
-    if (networksWithTransactions.length === 0) {
-      contentDiv.innerHTML = `
-        <div style="color: #6B7280; text-align: center; padding: 20px;">
-          <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
-          <div style="font-weight: 500; margin-bottom: 4px;">No Transaction History</div>
-          <div style="font-size: 12px;">This address has no recorded transactions on supported networks.</div>
-        </div>
-      `;
-      return;
-    }
-
-    // 멀티체인 분석 결과 렌더링
+    // 이미 트랜잭션이 있는 네트워크들만 분석했으므로 바로 렌더링
     renderMultiChainAnalysis(contentDiv, {
       address,
       addressType,
-      networks: networksWithTransactions
+      networks: networkAnalysisResults
     });
 
   } catch (error) {
@@ -355,7 +339,6 @@ const loadMoreAssets = async (address: string, protocol: string, network: string
 const callNoditAPI = async (protocol: string, network: string, operationId: string, requestBody: any, apiKey: string) => {
   // API 경로 매핑
   const apiPaths: { [key: string]: string } = {
-    'getAccountStats': 'stats/getAccountStats',
     'getTokensOwnedByAccount': 'token/getTokensOwnedByAccount',
     'getAssetsOwnedByAccount': 'asset/getAssetsOwnedByAccount',
     'getNativeBalanceByAccount': 'native/getNativeBalanceByAccount',
@@ -370,9 +353,7 @@ const callNoditAPI = async (protocol: string, network: string, operationId: stri
 
   // 요청 파라미터 변환 (API 스펙에 맞게)
   let transformedBody = requestBody;
-  if (operationId === 'getAccountStats') {
-    transformedBody = { address: requestBody.account };
-  } else if (operationId === 'getTokensOwnedByAccount') {
+  if (operationId === 'getTokensOwnedByAccount') {
     transformedBody = { 
       accountAddress: requestBody.account,
       rpp: requestBody.rpp || 10,
@@ -515,7 +496,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
 
   // 각 네트워크별 정보 표시
   networks.forEach((network: any, index: number) => {
-    const { protocol, network: networkName, accountStats, tokenBalances, assetBalances, nativeBalance, transactionCount } = network;
+    const { protocol, network: networkName, tokenBalances, assetBalances, nativeBalance, transactionCount } = network;
     const networkColor = networkColors[protocol] || '#6B7280';
     const networkKey = `${protocol}-${networkName}`;
     const paginationState = tokenPaginationState[networkKey];
