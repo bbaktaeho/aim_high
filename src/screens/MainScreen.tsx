@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAccountStats } from '../hooks/useAccountStats';
 import { useMetaMask } from '../hooks/useMetaMask';
 import { MainScreenProps, TransactionData } from '../types';
@@ -35,9 +35,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [noditApiKey, setNoditApiKey] = useState<string | null>(null);
   
-  // Ref to prevent multiple initializations
-  const isInitializedRef = useRef(false);
-
   // Load Nodit API key
   useEffect(() => {
     chrome.storage.local.get(['noditApiKey'], (result) => {
@@ -45,22 +42,17 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
     });
   }, []);
 
-  // Initialize MetaMask when component mounts (only once) - after storage loading is complete
+  // Initialize MetaMask once when not initializing
   useEffect(() => {
-    if (!isInitializedRef.current && !isInitializing) {
-      console.log('🚀 [MainScreen] Initializing MetaMask after storage load complete');
-      isInitializedRef.current = true;
-      
-      // 약간의 지연 후 초기화 (storage 로드 완료 보장)
-      setTimeout(() => {
-        initializeMetaMask();
-      }, 100);
+    if (!isInitializing) {
+      console.log('🚀 Initializing MetaMask after storage load complete');
+      initializeMetaMask();
     }
-  }, [initializeMetaMask, isInitializing]);
+  }, [isInitializing, initializeMetaMask]);
 
   // Debug: Log connection state changes
   useEffect(() => {
-    console.log('🔄 [MainScreen] Connection state changed:', {
+    console.log('🔄 Connection state changed:', {
       account,
       chainId,
       isConnecting,

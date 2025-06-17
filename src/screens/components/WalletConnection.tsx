@@ -76,7 +76,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
           borderRadius: '8px',
           border: '1px solid #ef4444',
         }}>
-          ⚠️ Please install MetaMask to use this feature
+          ⚠️ MetaMask을 설치해야 이 기능을 사용할 수 있습니다
           <div style={{ marginTop: '8px' }}>
             <a 
               href="https://metamask.io/download/" 
@@ -88,70 +88,95 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                 fontSize: '12px'
               }}
             >
-              Download MetaMask →
+              MetaMask 다운로드 →
             </a>
           </div>
         </div>
       ) : account ? (
         <>
+          {/* 컴팩트한 연결된 지갑 정보 */}
           <div style={{
-            fontSize: '13px',
-            color: '#aaa',
-            fontFamily: 'monospace',
-            wordBreak: 'break-all',
-            marginBottom: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            backgroundColor: '#1a1a1a',
+            borderRadius: '8px',
+            border: '1px solid #333',
           }}>
-            {formatAddress(account)}
-          </div>
-          {chainId && CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG] && (
+            {/* 왼쪽: 지갑 정보 */}
             <div style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginTop: '8px',
-              marginBottom: '12px',
-              padding: '8px 12px',
-              backgroundColor: '#333',
-              borderRadius: '8px',
+              flexDirection: 'column',
+              gap: '4px',
+              flex: 1,
             }}>
+              {/* 주소 (축약) */}
               <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].color,
-              }} />
-              <span style={{
                 fontSize: '14px',
+                fontWeight: '600',
                 color: 'white',
-                fontWeight: '500',
+                fontFamily: 'monospace',
               }}>
-                {CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].name}
-              </span>
+                {formatAddress(account)}
+              </div>
+              
+              {/* 체인 정보 (작은 텍스트) */}
+              {chainId && CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG] && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].color,
+                  }} />
+                  <span style={{
+                    fontSize: '11px',
+                    color: '#aaa',
+                    fontWeight: '400',
+                  }}>
+                    {CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].name}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-          <button
-            onClick={disconnectWallet}
-            style={{
-              width: '100%',
-              padding: '8px 16px',
-              backgroundColor: '#ef4444',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#ef4444';
-            }}
-          >
-            연결 해제하기
-          </button>
+            
+            {/* 오른쪽: 연결 해제 아이콘 버튼 */}
+            <button
+              onClick={disconnectWallet}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background-color 0.2s ease',
+                color: '#ef4444',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title="연결 해제"
+            >
+              {/* 연결 해제 아이콘 (체인 끊어짐) */}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5Z" fill="currentColor"/>
+                <path d="M11 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1S5.29 8.9 7 8.9h4V7Z" fill="currentColor"/>
+                <path d="M8 11h8v2H8v-2Z" fill="currentColor"/>
+                <path d="M19 3L5 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -195,14 +220,14 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite',
                 }} />
-                {isRequestPending ? 'MetaMask 요청 중...' : '연결 중...'}
+                MetaMask 연결 중...
               </>
             ) : (
               'MetaMask 연결하기'
             )}
           </button>
           
-          {/* Enhanced error display */}
+          {/* 에러 메시지 표시 */}
           {error && (
             <div style={{
               fontSize: '13px',
@@ -215,7 +240,6 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
               lineHeight: '1.4',
             }}>
               {error === 'unlock_required' ? (
-                // 잠금 해제 안내 (에러가 아닌 친근한 안내)
                 <>
                   <div style={{ 
                     fontWeight: '600', 
@@ -238,7 +262,6 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                   </div>
                 </>
               ) : (
-                // 일반 에러 메시지
                 <>
                   <div style={{ 
                     fontWeight: '600', 
@@ -252,51 +275,13 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                   <div style={{ fontSize: '12px' }}>
                     {error}
                   </div>
-                  {error.includes('pending') && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '8px',
-                      color: '#fcd34d',
-                    }}>
-                      💡 MetaMask 팝업을 확인하거나 잠시 후 다시 시도해주세요.
-                    </div>
-                  )}
-                  {error.includes('rejected') && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '8px',
-                      color: '#fcd34d',
-                    }}>
-                      💡 연결을 승인하시려면 MetaMask에서 "연결" 버튼을 클릭해주세요.
-                    </div>
-                  )}
-                  {error.includes('locked') && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '8px',
-                      color: '#fcd34d',
-                    }}>
-                      🔓 MetaMask가 잠겨있습니다. MetaMask를 열어서 비밀번호를 입력해 잠금을 해제해주세요.
-                    </div>
-                  )}
-                  {error.includes('processing another request') && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '8px',
-                      color: '#fcd34d',
-                    }}>
-                      ⏳ MetaMask가 다른 요청을 처리 중입니다. 잠시 기다리거나 MetaMask를 확인해주세요.
-                    </div>
-                  )}
-                  {error.includes('timeout') && (
-                    <div style={{ 
-                      fontSize: '12px', 
-                      marginTop: '8px',
-                      color: '#fcd34d',
-                    }}>
-                      ⏰ MetaMask 응답 시간이 초과되었습니다. MetaMask 팝업을 확인하고 다시 시도해주세요.
-                    </div>
-                  )}
+                  <div style={{ 
+                    fontSize: '12px', 
+                    marginTop: '8px',
+                    color: '#fcd34d',
+                  }}>
+                    💡 MetaMask 팝업을 확인하거나 잠시 후 다시 시도해주세요.
+                  </div>
                 </>
               )}
             </div>
