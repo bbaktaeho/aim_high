@@ -51,7 +51,7 @@ function showBalloon(message: string, streamData?: any): void {
   balloon.style.zIndex = "999998";
   balloon.style.backgroundColor = "#ffffff";
   balloon.style.color = "#333";
-  balloon.style.padding = "10px 14px";
+  balloon.style.padding = "10px 14px 10px 10px";
   balloon.style.borderRadius = "16px";
   balloon.style.fontSize = "12px";
   balloon.style.fontWeight = "500";
@@ -171,6 +171,9 @@ function showBalloon(message: string, streamData?: any): void {
           const isOutgoing = targetAddress.toLowerCase() === transaction.from_address.toLowerCase();
           const direction = isOutgoing ? "트랜잭션이 처리되었어요" : "트랜잭션을 받았어요";
 
+          // 좌측 컬러 바 색상 결정
+          const sidebarColor = isOutgoing ? "#00d16c" : "#3b82f6"; // 녹색(송금) / 파란색(수신)
+
           // 주소 단축
           const formatAddress = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
@@ -178,32 +181,69 @@ function showBalloon(message: string, streamData?: any): void {
           const txHash = transaction.transaction_hash || transaction.hash || transaction.txHash;
           const txExplorerUrl = txHash ? getTxExplorerUrl(result.walletChainId || 1, txHash) : null;
 
-          balloonContent = `
-            <div style="font-weight: bold; color: ${isOutgoing ? "#00d16c" : "#00d16c"}; margin-bottom: 8px;">
-              ${direction}
-            </div>
-            <div style="margin-bottom: 6px;">
-              <span style="color: #666;">From:</span> ${formatAddress(transaction.from_address)}
-            </div>
-            <div style="margin-bottom: 6px;">
-              <span style="color: #666;">To:</span> ${formatAddress(transaction.to_address)}
-            </div>
-            <div style="margin-bottom: 6px;">
-              <span style="color: #666;">Amount:</span> <strong>${valueEth} ETH</strong>
-            </div>
-            ${
-              txExplorerUrl
-                ? `
-            <div style="margin-bottom: 6px;">
-              <a href="${txExplorerUrl}" target="_blank" rel="noopener noreferrer" style="color: #00d16c; text-decoration: none; font-size: 11px;">
-                🔍 블록 익스플로러에서 보기
-              </a>
-            </div>
-            `
-                : ""
+          // 블록 타임스탬프를 한국 시간으로 변환
+          const formatKoreanTime = (timestamp: number | string): string => {
+            try {
+              const date = new Date(typeof timestamp === "string" ? parseInt(timestamp) * 1000 : timestamp * 1000);
+              return date.toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              });
+            } catch (error) {
+              console.error("Error formatting timestamp:", error);
+              return "";
             }
-            <div style="font-size: 11px; color: #999; margin-top: 8px;">
-              ${networkName}
+          };
+
+          const blockTimestamp = transaction.block_timestamp || transaction.timestamp;
+          const koreanTime = blockTimestamp ? formatKoreanTime(blockTimestamp) : null;
+
+          balloonContent = `
+            <div style="display: flex;">
+              <div style="width: 4px; background-color: ${sidebarColor}; border-radius: 2px 0 0 2px; margin-right: 12px;"></div>
+              <div style="flex: 1;">
+                <div style="font-weight: bold; color: #333; margin-bottom: 8px; font-size: 13px;">
+                  ${direction}
+                </div>
+                <div style="margin-bottom: 6px;">
+                  <span style="color: #666;">From:</span> ${formatAddress(transaction.from_address)}
+                </div>
+                <div style="margin-bottom: 6px;">
+                  <span style="color: #666;">To:</span> ${formatAddress(transaction.to_address)}
+                </div>
+                <div style="margin-bottom: 6px;">
+                  <span style="color: #666;">Amount:</span> <strong>${valueEth} ETH</strong>
+                </div>
+                ${
+                  txExplorerUrl
+                    ? `
+                <div style="margin-bottom: 6px;">
+                  <a href="${txExplorerUrl}" target="_blank" rel="noopener noreferrer" style="color: #00d16c; text-decoration: none; font-size: 11px;">
+                    🔍 블록 익스플로러에서 보기
+                  </a>
+                </div>
+                `
+                    : ""
+                }
+                ${
+                  koreanTime
+                    ? `
+                <div style="margin-bottom: 6px; font-size: 11px; color: #888;">
+                  ${koreanTime}
+                </div>
+                `
+                    : ""
+                }
+                <div style="font-size: 11px; color: #999; margin-top: 8px;">
+                  ${networkName}
+                </div>
+              </div>
             </div>
           `;
 
