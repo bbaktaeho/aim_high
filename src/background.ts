@@ -88,14 +88,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.log(`Failed to send initial extension state to tab ${tabId}`);
           });
 
-        // Send transaction checker state
+        // Send Transaction Tracker state
         chrome.tabs
           .sendMessage(tabId, {
             type: "TOGGLE_TRANSACTION_CHECKER",
             isEnabled: result.isTransactionCheckerEnabled ?? false,
           })
           .catch(() => {
-            console.log(`Failed to send initial transaction checker state to tab ${tabId}`);
+            console.log(`Failed to send initial Transaction Tracker state to tab ${tabId}`);
           });
 
         console.log(`🚀 Initial state sent to tab ${tabId}:`, result);

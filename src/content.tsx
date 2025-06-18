@@ -1712,8 +1712,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
     
     if (changes.isTransactionCheckerEnabled) {
-      console.log('Transaction checker state changed:', changes.isTransactionCheckerEnabled);
-      // Transaction checker 상태 변경 처리 (필요시 추가 로직 구현)
+      console.log('Transaction Tracker state changed:', changes.isTransactionCheckerEnabled);
+      // Transaction Tracker 상태 변경 처리 (필요시 추가 로직 구현)
     }
   }
 });
@@ -1744,7 +1744,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'TOGGLE_TRANSACTION_CHECKER') {
     console.log('TOGGLE_TRANSACTION_CHECKER received:', message.isEnabled);
-    // Transaction checker 상태 처리 (필요시 추가 로직 구현)
+    // Transaction Tracker 상태 처리 (필요시 추가 로직 구현)
   }
 
   if (message.type === 'STATE_SYNC_RESPONSE') {

@@ -192,9 +192,9 @@ window.addEventListener("message", async (event) => {
   console.log("🦊 MetaMask event listeners initialized");
 })();
 
-// Transaction Checker: eth_sendTransaction 후킹
+// Transaction Tracker: eth_sendTransaction 후킹
 (function () {
-  console.log("Transaction Checker: script injected");
+  console.log("Transaction Tracker: script injected");
   if (window.__transactionCheckerInjected) return;
   window.__transactionCheckerInjected = true;
   if (!window.ethereum || !window.ethereum.request) return;
@@ -202,7 +202,7 @@ window.addEventListener("message", async (event) => {
   const originalRequest = window.ethereum.request;
 
   window.ethereum.request = async function (...args) {
-    console.log("Transaction Checker: received", args);
+    console.log("Transaction Tracker: received", args);
     const [payload] = args;
     if (payload.method === "eth_sendTransaction") {
       console.log("🚀 트랜잭션 요청:", payload);

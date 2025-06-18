@@ -1,9 +1,9 @@
-// Transaction Checker Content Script
+// Transaction Tracker Content Script
 // 이 스크립트는 트랜잭션 체커가 활성화될 때만 주입됩니다.
 
 let isTransactionCheckerInitialized = false;
 
-// Transaction Checker page script 주입 함수
+// Transaction Tracker page script 주입 함수
 const injectTransactionCheckerScript = () => {
   // 이미 주입된 경우 중복 주입 방지
   if (document.getElementById("transaction-checker-script")) return;
@@ -11,15 +11,15 @@ const injectTransactionCheckerScript = () => {
   script.id = "transaction-checker-script";
   script.src = chrome.runtime.getURL("page-script.js");
   (document.head || document.documentElement).appendChild(script);
-  console.log("Transaction Checker: page script injected");
+  console.log("Transaction Tracker: page script injected");
 };
 
-// Transaction Checker page script 제거 함수
+// Transaction Tracker page script 제거 함수
 const removeTransactionCheckerScript = () => {
   const script = document.getElementById("transaction-checker-script");
   if (script) {
     script.remove();
-    console.log("Transaction Checker: page script removed");
+    console.log("Transaction Tracker: page script removed");
   }
 };
 
@@ -27,16 +27,16 @@ const removeTransactionCheckerScript = () => {
 const handleTransactionMessage = (event: MessageEvent) => {
   if (event.source !== window) return;
   if (event.data && event.data.type === "TX_CHECKER_SEND") {
-    console.log("Transaction Checker: received TX_CHECKER_SEND", event.data.payload);
+    console.log("Transaction Tracker: received TX_CHECKER_SEND", event.data.payload);
     chrome.runtime.sendMessage({ type: "TX_CHECKER_SEND", payload: event.data.payload });
   }
 };
 
-// Transaction Checker 초기화
+// Transaction Tracker 초기화
 const initializeTransactionChecker = () => {
   if (isTransactionCheckerInitialized) return;
 
-  console.log("Transaction Checker: initializing...");
+  console.log("Transaction Tracker: initializing...");
 
   // page script 주입
   injectTransactionCheckerScript();
@@ -45,14 +45,14 @@ const initializeTransactionChecker = () => {
   window.addEventListener("message", handleTransactionMessage);
 
   isTransactionCheckerInitialized = true;
-  console.log("Transaction Checker: initialized");
+  console.log("Transaction Tracker: initialized");
 };
 
-// Transaction Checker 정리
+// Transaction Tracker 정리
 const cleanupTransactionChecker = () => {
   if (!isTransactionCheckerInitialized) return;
 
-  console.log("Transaction Checker: cleaning up...");
+  console.log("Transaction Tracker: cleaning up...");
 
   // page script 제거
   removeTransactionCheckerScript();
@@ -61,7 +61,7 @@ const cleanupTransactionChecker = () => {
   window.removeEventListener("message", handleTransactionMessage);
 
   isTransactionCheckerInitialized = false;
-  console.log("Transaction Checker: cleaned up");
+  console.log("Transaction Tracker: cleaned up");
 };
 
 // 메시지 리스너 (background/popup에서 오는 메시지)

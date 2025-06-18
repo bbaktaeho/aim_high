@@ -280,7 +280,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               borderBottom: '1px solid #333',
             }}>
               <div>
-                <strong>Transaction Checker</strong>
+                <strong>Transaction Tracker</strong>
                 <p style={{
                   fontSize: '13px',
                   color: '#aaa',
