@@ -2,7 +2,6 @@
 
 const CHARACTER_ID = "nodit-onchain-character";
 const BALLOON_ID = "nodit-onchain-balloon";
-let intervalId: number | null = null;
 
 function createCharacterUI(): void {
   if (document.getElementById(CHARACTER_ID)) return; // Prevent duplicate
@@ -69,9 +68,11 @@ function createCharacterUI(): void {
   wrapper.appendChild(img);
   document.body.appendChild(wrapper);
 
-  // Start interval
-  updateBalloon();
-  intervalId = window.setInterval(updateBalloon, 2000);
+  // Initialize with empty state - will only show messages from stream events
+  const textElement = balloon.querySelector(".nodit-balloon-text") as HTMLDivElement;
+  if (textElement) {
+    textElement.textContent = "대기 중...";
+  }
 }
 
 let currentMessage: string = "";
@@ -84,25 +85,19 @@ function updateBalloon(customMessage?: string): void {
   if (!textElement) return;
 
   if (customMessage) {
-    // Use custom message from webhook
+    // Use custom message from stream events
     textElement.textContent = customMessage;
     currentMessage = customMessage;
   } else if (currentMessage) {
     // Keep showing the current message
     textElement.textContent = currentMessage;
   } else {
-    // Default message
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    textElement.textContent = `트랜잭션을 모니터링 중...\n${timeStr}`;
+    // Show waiting state when no active message
+    textElement.textContent = "대기 중...";
   }
 }
 
 function removeCharacterUI(): void {
-  if (intervalId !== null) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
   const el = document.getElementById(CHARACTER_ID);
   if (el) el.remove();
 }
@@ -125,5 +120,26 @@ chrome.storage.onChanged.addListener((changes: { [key: string]: chrome.storage.S
   }
 });
 
-// Note: Webhook functionality has been removed as requested
-// The character will only show monitoring status messages
+// Listen for stream events from background script
+chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+  if (message.type === "STREAM_EVENT") {
+    const timestamp = new Date().toLocaleTimeString("ko-KR");
+    console.log(`📨 [${timestamp}] Stream event received in onchain-notification:`, {
+      messageType: message.type,
+      messageContent: message.message,
+      streamData: message.data,
+      sender: sender?.tab?.url || "background",
+      currentCharacterVisible: !!document.getElementById(CHARACTER_ID),
+    });
+
+    // Update balloon with formatted stream message
+    updateBalloon(message.message);
+    console.log(`🎈 Balloon updated with stream message at ${timestamp}`);
+
+    // Clear the custom message after 15 seconds
+    setTimeout(() => {
+      currentMessage = "";
+      console.log(`🕐 Custom message cleared after 15 seconds`);
+    }, 15000);
+  }
+});

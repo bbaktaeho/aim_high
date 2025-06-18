@@ -61,6 +61,52 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
     });
   }, [account, chainId, isConnecting, error, isMetaMaskInstalled]);
 
+  // Handle stream connection when wallet is connected and onchain notification is enabled
+  useEffect(() => {
+    const handleStreamConnection = async () => {
+      const result = await chrome.storage.local.get(['isOnchainNotificationEnabled']);
+      
+      if (account && chainId && noditApiKey && result.isOnchainNotificationEnabled) {
+        console.log('🔗 Connecting to Nodit Stream with wallet data:', {
+          account,
+          chainId,
+          hasApiKey: !!noditApiKey
+        });
+
+        try {
+          const response = await chrome.runtime.sendMessage({
+            type: 'MANAGE_STREAM',
+            action: 'connect',
+            account,
+            chainId,
+            apiKey: noditApiKey
+          });
+
+          if (response.success) {
+            console.log('✅ Successfully connected to Nodit Stream');
+          } else {
+            console.error('❌ Failed to connect to Nodit Stream:', response.error);
+          }
+        } catch (error) {
+          console.error('❌ Error managing stream connection:', error);
+        }
+      } else if (!account || !chainId) {
+        // Disconnect stream when wallet is disconnected
+        try {
+          await chrome.runtime.sendMessage({
+            type: 'MANAGE_STREAM',
+            action: 'disconnect'
+          });
+          console.log('🔌 Disconnected from Nodit Stream due to wallet disconnection');
+        } catch (error) {
+          console.log('Stream was already disconnected');
+        }
+      }
+    };
+
+    handleStreamConnection();
+  }, [account, chainId, noditApiKey]);
+
   // Transaction data listener
   useEffect(() => {
     const handleTxChecker = (message: any, sender: any, sendResponse: any) => {

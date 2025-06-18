@@ -1,29 +1,45 @@
-import { simulateWebhookEvent, startWebhookPolling, stopWebhookPolling } from "./services/webhookServer";
-import {
-  createWebhook,
-  deleteWebhook,
-  formatWebhookData,
-  getNetworkFromChainId,
-  WebhookCreateRequest,
-  WebhookEventData,
-} from "./services/webhookService";
+import { noditStreamService } from "./services/noditStream";
+
+// Network mapping helper
+const getNetworkFromChainId = (chainId: string | number): { protocol: string; network: string } | null => {
+  const id = typeof chainId === "string" ? parseInt(chainId, 16) : chainId;
+
+  switch (id) {
+    case 1:
+      return { protocol: "ethereum", network: "mainnet" };
+    case 5:
+      return { protocol: "ethereum", network: "goerli" };
+    case 11155111:
+      return { protocol: "ethereum", network: "sepolia" };
+    case 137:
+      return { protocol: "polygon", network: "mainnet" };
+    case 80001:
+      return { protocol: "polygon", network: "mumbai" };
+    case 42161:
+      return { protocol: "arbitrum", network: "mainnet" };
+    case 421613:
+      return { protocol: "arbitrum", network: "goerli" };
+    default:
+      return null;
+  }
+};
 
 // Initialize extension state
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     isEnabled: false,
     isTransactionCheckerEnabled: false,
-    isWebhookEnabled: false,
-    webhookSubscriptions: {},
+    isOnchainNotificationEnabled: false,
   });
 });
 
 // Store active tab IDs where content script is loaded
 const activeTabs = new Set<number>();
 
-// Webhook polling management
-let webhookPollingInterval: number | null = null;
-const activeWebhooks = new Map<string | number, string>(); // chainId -> subscriptionId
+// Stream connection state
+let isStreamConnected = false;
+let currentStreamAccount: string | null = null;
+let currentChainId: number | null = null;
 
 // Broadcast state changes to all active tabs
 const broadcastStateToAllTabs = async (changes: any) => {
@@ -48,6 +64,13 @@ const broadcastStateToAllTabs = async (changes: any) => {
           });
         }
 
+        if (changes.isOnchainNotificationEnabled) {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: "TOGGLE_ONCHAIN_NOTIFICATION",
+            isEnabled: changes.isOnchainNotificationEnabled.newValue,
+          });
+        }
+
         console.log(`✅ State broadcasted to tab ${tab.id}`);
       } catch (error) {
         console.log(`❌ Failed to broadcast to tab ${tab.id}:`, error);
@@ -58,6 +81,179 @@ const broadcastStateToAllTabs = async (changes: any) => {
   });
 
   await Promise.allSettled(broadcastPromises);
+
+  // Handle onchain notification stream connection
+  if (changes.isOnchainNotificationEnabled) {
+    if (changes.isOnchainNotificationEnabled.newValue) {
+      // Connect to stream when enabled
+      await connectToStreamIfReady();
+    } else {
+      // Disconnect from stream when disabled
+      disconnectFromStream();
+    }
+  }
+};
+
+// Connect to Nodit Stream if conditions are met
+const connectToStreamIfReady = async () => {
+  try {
+    const result = await chrome.storage.local.get([
+      "isOnchainNotificationEnabled",
+      "connectedAccount",
+      "connectedChainId",
+      "noditApiKey",
+    ]);
+
+    const { isOnchainNotificationEnabled, connectedAccount, connectedChainId, noditApiKey } = result;
+
+    if (isOnchainNotificationEnabled && connectedAccount && connectedChainId && noditApiKey) {
+      const networkInfo = getNetworkFromChainId(connectedChainId);
+
+      if (networkInfo) {
+        console.log("🚀 Connecting to Nodit Stream:", {
+          account: connectedAccount,
+          chainId: connectedChainId,
+          protocol: networkInfo.protocol,
+          network: networkInfo.network,
+        });
+
+        console.log("🔄 Attempting to connect to Nodit Stream...");
+        const success = await noditStreamService.connect(
+          connectedAccount,
+          networkInfo.protocol,
+          networkInfo.network,
+          noditApiKey,
+          handleStreamEvent
+        );
+
+        if (success) {
+          isStreamConnected = true;
+          currentStreamAccount = connectedAccount;
+          currentChainId = connectedChainId;
+          console.log("✅ Successfully connected to Nodit Stream");
+          console.log("🔍 Connection status:", {
+            isStreamConnected,
+            currentStreamAccount,
+            currentChainId,
+            connectionInfo: noditStreamService.getConnectionInfo(),
+          });
+        } else {
+          console.error("❌ Failed to connect to Nodit Stream");
+          console.error("🔍 Connection failure details:", {
+            account: connectedAccount,
+            protocol: networkInfo.protocol,
+            network: networkInfo.network,
+            hasApiKey: !!noditApiKey,
+            connectionInfo: noditStreamService.getConnectionInfo(),
+          });
+        }
+      } else {
+        console.error("❌ Unsupported chain ID for stream:", connectedChainId);
+      }
+    } else {
+      console.log("⚠️ Missing required data for stream connection:", {
+        isOnchainNotificationEnabled,
+        connectedAccount: !!connectedAccount,
+        connectedChainId: !!connectedChainId,
+        noditApiKey: !!noditApiKey,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error connecting to stream:", error);
+  }
+};
+
+// Disconnect from Nodit Stream
+const disconnectFromStream = () => {
+  if (isStreamConnected) {
+    noditStreamService.disconnect();
+    isStreamConnected = false;
+    currentStreamAccount = null;
+    currentChainId = null;
+    console.log("🔌 Disconnected from Nodit Stream");
+  }
+};
+
+// Handle stream events
+const handleStreamEvent = (eventData: any) => {
+  const timestamp = new Date().toLocaleTimeString("ko-KR");
+  console.log(`📨 [${timestamp}] ===== STREAM EVENT RECEIVED =====`);
+  console.log(`📨 [${timestamp}] Full raw stream data:`, JSON.stringify(eventData, null, 2));
+  console.log(`📊 [${timestamp}] Stream event data type:`, typeof eventData);
+  console.log(`📊 [${timestamp}] Stream event keys:`, Object.keys(eventData || {}));
+  console.log(`📊 [${timestamp}] Stream event values:`, Object.values(eventData || {}));
+  console.log(`📨 [${timestamp}] =====================================`);
+
+  // Format the stream data for display
+  const { from, to, value, hash, status } = eventData;
+  const networkInfo = getNetworkFromChainId(currentChainId || 1);
+  const chainName = networkInfo ? `${networkInfo.protocol}/${networkInfo.network}` : "Unknown Chain";
+
+  const shortFrom = from ? `${from.slice(0, 6)}...${from.slice(-4)}` : "Unknown";
+  const shortTo = to ? `${to.slice(0, 6)}...${to.slice(-4)}` : "Unknown";
+  const statusIcon = status === "success" ? "✅" : status === "failed" ? "❌" : "⏳";
+
+  // Format value to ETH if it's a valid number
+  let displayValue = value || "0";
+  if (value && value !== "0" && value !== "0x0") {
+    try {
+      const valueInWei = typeof value === "string" && value.startsWith("0x") ? parseInt(value, 16) : parseInt(value);
+      const valueInEth = valueInWei / Math.pow(10, 18);
+      displayValue = valueInEth > 0.001 ? `${valueInEth.toFixed(4)} ETH` : `${valueInWei} wei`;
+    } catch (e) {
+      displayValue = value;
+    }
+  }
+
+  const displayMessage = `🔗 트랜잭션 감지! [${chainName}]
+From: ${shortFrom}
+To: ${shortTo}
+Value: ${displayValue}
+Status: ${statusIcon} ${status || "처리중"}`;
+
+  const formattedData = {
+    chain: chainName,
+    from,
+    to,
+    value: displayValue,
+    status: status || "processing",
+    hash,
+  };
+
+  // Broadcast to all tabs
+  broadcastStreamEventToAllTabs(displayMessage, formattedData);
+};
+
+// Broadcast stream events to all tabs
+const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
+  const timestamp = new Date().toLocaleTimeString("ko-KR");
+  const tabs = await chrome.tabs.query({});
+  console.log(`📡 [${timestamp}] Broadcasting stream event to ${tabs.length} tabs`);
+
+  const broadcastPromises = tabs.map(async (tab) => {
+    if (tab.id && tab.url?.startsWith("http")) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "STREAM_EVENT",
+          message,
+          data,
+          timestamp,
+        });
+        console.log(`📤 [${timestamp}] Stream event sent to tab ${tab.id}`);
+        return { success: true, tabId: tab.id };
+      } catch (error) {
+        console.log(`❌ [${timestamp}] Failed to send stream event to tab ${tab.id}:`, error);
+        return { success: false, tabId: tab.id, error };
+      }
+    }
+    return { success: false, tabId: tab.id, reason: "invalid_url" };
+  });
+
+  const results = await Promise.allSettled(broadcastPromises);
+  const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
+  const failed = results.length - successful;
+
+  console.log(`📊 [${timestamp}] Stream broadcast complete: ${successful} successful, ${failed} failed`);
 };
 
 // Listen for storage changes and broadcast to all tabs
@@ -68,6 +264,27 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+// Auto-inject onchain-notification script when needed
+const autoInjectOnchainNotification = async (tabId: number) => {
+  try {
+    const result = await chrome.storage.local.get(["isOnchainNotificationEnabled"]);
+
+    if (result.isOnchainNotificationEnabled) {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ["onchain-notification.js"],
+        });
+        console.log(`🔔 On-chain notification auto-injected in tab ${tabId}`);
+      } catch (err) {
+        console.log(`❌ Failed to auto-inject on-chain notification in tab ${tabId}:`, err);
+      }
+    }
+  } catch (storageErr) {
+    console.error("Failed to check on-chain notification state:", storageErr);
+  }
+};
+
 // Listen for content script ready message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CONTENT_SCRIPT_READY" && sender.tab?.id) {
@@ -75,7 +292,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(`📝 Content script ready in tab ${sender.tab.id}`);
 
     // Send current state to the newly loaded content script
-    chrome.storage.local.get(["isEnabled", "isTransactionCheckerEnabled"], (result) => {
+    chrome.storage.local.get(["isEnabled", "isTransactionCheckerEnabled", "isOnchainNotificationEnabled"], (result) => {
       const tabId = sender.tab?.id;
       if (tabId) {
         // Send extension state
@@ -101,6 +318,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log(`🚀 Initial state sent to tab ${tabId}:`, result);
       }
     });
+
+    // Auto-inject onchain notification if enabled
+    autoInjectOnchainNotification(sender.tab.id);
   }
 
   if (message.type === "TX_CHECKER_SEND") {
@@ -117,7 +337,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Handle manual state sync request
   if (message.type === "REQUEST_STATE_SYNC" && sender.tab?.id) {
     const tabId = sender.tab.id;
-    chrome.storage.local.get(["isEnabled", "isTransactionCheckerEnabled"], (result) => {
+    chrome.storage.local.get(["isEnabled", "isTransactionCheckerEnabled", "isOnchainNotificationEnabled"], (result) => {
       chrome.tabs
         .sendMessage(tabId, {
           type: "STATE_SYNC_RESPONSE",
@@ -127,6 +347,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           console.log(`Failed to send state sync response to tab ${tabId}`);
         });
     });
+  }
+
+  // Handle stream management requests
+  if (message.type === "MANAGE_STREAM") {
+    const { action, account, chainId, apiKey } = message;
+
+    if (action === "connect") {
+      // Store connection data and connect
+      chrome.storage.local
+        .set({
+          connectedAccount: account,
+          connectedChainId: chainId,
+          noditApiKey: apiKey,
+        })
+        .then(() => {
+          connectToStreamIfReady()
+            .then(() => sendResponse({ success: true }))
+            .catch((error) => sendResponse({ success: false, error: error.message }));
+        });
+    } else if (action === "disconnect") {
+      disconnectFromStream();
+      chrome.storage.local.remove(["connectedAccount", "connectedChainId"]);
+      sendResponse({ success: true });
+    }
+
+    return true; // Keep message channel open for async response
   }
 });
 
@@ -167,6 +413,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     } catch (storageErr) {
       console.error("Failed to check Transaction Tracker state:", storageErr);
     }
+
+    // Auto-inject onchain notification if enabled
+    autoInjectOnchainNotification(tabId);
   }
 });
 
@@ -175,212 +424,39 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   activeTabs.delete(tabId);
 });
 
-// Webhook Management Functions
-async function createWebhookForAccount(account: string, chainId: string | number, apiKey: string): Promise<void> {
-  try {
-    const networkInfo = getNetworkFromChainId(chainId);
-    if (!networkInfo) {
-      console.error(`❌ Unsupported chain ID: ${chainId}`);
-      return;
-    }
-
-    // Check if webhook already exists for this chain
-    if (activeWebhooks.has(chainId)) {
-      console.log(`📎 Webhook already exists for chain ${chainId}`);
-      return;
-    }
-
-    // Create webhook URL (for demo purposes, we'll use a placeholder)
-    // In production, you would need a real webhook endpoint
-    const webhookUrl = "https://webhook.site/unique-url-here";
-
-    const webhookRequest: WebhookCreateRequest = {
-      url: webhookUrl,
-      eventType: "ADDRESS_ACTIVITY",
-      addresses: [account],
-      includeTransactionReceipts: true,
-      includeInternalTransactions: true,
-      includeTokenTransfers: true,
-      includeNftTransfers: true,
-      isInstant: true,
-    };
-
-    console.log(`🎣 Creating webhook with request:`, webhookRequest);
-    const response = await createWebhook(networkInfo.protocol, networkInfo.network, apiKey, webhookRequest);
-    console.log(`🎣 Webhook creation response:`, response);
-
-    // Store webhook subscription
-    activeWebhooks.set(chainId, response.subscriptionId);
-
-    // Update storage
-    const result = await chrome.storage.local.get(["webhookSubscriptions"]);
-    const subscriptions = result.webhookSubscriptions || {};
-    subscriptions[chainId] = {
-      subscriptionId: response.subscriptionId,
-      account,
-      network: networkInfo,
-      createdAt: Date.now(),
-      webhookUrl: webhookRequest.url,
-      isInstant: webhookRequest.isInstant,
-    };
-
-    await chrome.storage.local.set({ webhookSubscriptions: subscriptions });
-
-    console.log(`✅ Webhook successfully created and stored:`, {
-      subscriptionId: response.subscriptionId,
-      account,
-      chainId,
-      network: `${networkInfo.protocol}/${networkInfo.network}`,
-      isInstant: webhookRequest.isInstant,
-      url: webhookRequest.url,
-    });
-
-    // Start polling for webhook events if not already started
-    if (!webhookPollingInterval) {
-      startWebhookEventPolling();
-    }
-  } catch (error) {
-    console.error("❌ Failed to create webhook:", error);
-  }
-}
-
-async function deleteWebhookForChain(chainId: string | number, apiKey: string): Promise<void> {
-  try {
-    const subscriptionId = activeWebhooks.get(chainId);
-    if (!subscriptionId) {
-      console.log(`❌ No webhook found for chain ${chainId}`);
-      return;
-    }
-
-    const networkInfo = getNetworkFromChainId(chainId);
-    if (!networkInfo) {
-      console.error(`❌ Unsupported chain ID: ${chainId}`);
-      return;
-    }
-
-    console.log(`🗑️ Deleting webhook:`, {
-      subscriptionId,
-      chainId,
-      network: `${networkInfo.protocol}/${networkInfo.network}`,
-    });
-
-    await deleteWebhook(networkInfo.protocol, networkInfo.network, apiKey, subscriptionId);
-
-    // Remove from active webhooks
-    activeWebhooks.delete(chainId);
-
-    // Update storage
-    const result = await chrome.storage.local.get(["webhookSubscriptions"]);
-    const subscriptions = result.webhookSubscriptions || {};
-    const deletedSubscription = subscriptions[chainId];
-    delete subscriptions[chainId];
-    await chrome.storage.local.set({ webhookSubscriptions: subscriptions });
-
-    console.log(`✅ Webhook successfully deleted:`, {
-      subscriptionId,
-      chainId,
-      network: `${networkInfo.protocol}/${networkInfo.network}`,
-      deletedSubscription,
-    });
-
-    // Stop polling if no active webhooks
-    if (activeWebhooks.size === 0 && webhookPollingInterval) {
-      stopWebhookPolling(webhookPollingInterval);
-      webhookPollingInterval = null;
-    }
-  } catch (error) {
-    console.error("❌ Failed to delete webhook:", error);
-  }
-}
-
-function startWebhookEventPolling(): void {
-  if (webhookPollingInterval) return;
-
-  webhookPollingInterval = startWebhookPolling((events: WebhookEventData[]) => {
-    const timestamp = new Date().toLocaleTimeString("ko-KR");
-    console.log(`📨 [${timestamp}] Received ${events.length} webhook events:`, events);
-
-    events.forEach((event, index) => {
-      // Get chain ID from event context (you might need to pass this from the webhook response)
-      const chainId = event.network || "1"; // Default to Ethereum mainnet if not provided
-
-      // Format the webhook data for display
-      const formattedData = formatWebhookData(event, chainId);
-      console.log(`🔄 [${timestamp}] Processing event ${index + 1}/${events.length}:`, {
-        subscriptionId: event.subscriptionId,
-        from: event.from,
-        to: event.to,
-        value: event.value,
-        status: event.status,
-        formattedMessage: formattedData.message.substring(0, 100) + "...",
-        chainData: formattedData.data,
-      });
-
-      // Send to onchain notification with both message and data
-      broadcastWebhookEventToAllTabs(formattedData.message, formattedData.data);
-    });
-  });
-
-  console.log("🔄 Webhook event polling started");
-}
-
-async function broadcastWebhookEventToAllTabs(message: string, data?: any): Promise<void> {
-  const timestamp = new Date().toLocaleTimeString("ko-KR");
-  const tabs = await chrome.tabs.query({});
-  console.log(`📡 [${timestamp}] Broadcasting webhook event to ${tabs.length} tabs`);
-
-  const broadcastPromises = tabs.map(async (tab) => {
-    if (tab.id && tab.url?.startsWith("http")) {
-      try {
-        await chrome.tabs.sendMessage(tab.id, {
-          type: "WEBHOOK_EVENT",
-          message,
-          data,
-          timestamp,
-        });
-        console.log(`📤 [${timestamp}] Webhook event sent to tab ${tab.id} (${tab.url})`);
-        return { success: true, tabId: tab.id, url: tab.url };
-      } catch (error) {
-        // Tab might not have the content script loaded
-        console.log(`❌ [${timestamp}] Failed to send webhook event to tab ${tab.id} (${tab.url}):`, error);
-        return { success: false, tabId: tab.id, url: tab.url, error };
-      }
-    }
-    return { success: false, tabId: tab.id, reason: "invalid_url" };
-  });
-
-  const results = await Promise.allSettled(broadcastPromises);
-  const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
-  const failed = results.length - successful;
-
-  console.log(`📊 [${timestamp}] Webhook broadcast complete: ${successful} successful, ${failed} failed`);
-}
-
-// Handle webhook management messages
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "MANAGE_WEBHOOK") {
-    const { action, account, chainId, apiKey } = message;
-
-    if (action === "create") {
-      createWebhookForAccount(account, chainId, apiKey)
-        .then(() => sendResponse({ success: true }))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
-    } else if (action === "delete") {
-      deleteWebhookForChain(chainId, apiKey)
-        .then(() => sendResponse({ success: true }))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
-    }
-
-    return true; // Keep message channel open for async response
-  }
-
-  // Test webhook simulation
-  if (message.type === "SIMULATE_WEBHOOK") {
-    const { from, to, value, network } = message;
-    simulateWebhookEvent(from, to, value, network)
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
-
-    return true;
-  }
+// Initialize stream connection on startup if conditions are met
+chrome.runtime.onStartup.addListener(() => {
+  console.log("🚀 Extension startup, checking for stream connection...");
+  connectToStreamIfReady();
 });
+
+// Also check on extension install/enable
+setTimeout(() => {
+  console.log("🔄 Extension loaded, checking for stream connection...");
+  connectToStreamIfReady();
+}, 1000);
+
+// Test function for stream simulation
+const testStreamEvent = () => {
+  console.log("🧪 Testing stream event simulation...");
+
+  const mockEventData = {
+    from: "0x742d35Cc6634C0532925a3b8D4Cc23d3b8f5e5e5",
+    to: "0x1234567890123456789012345678901234567890",
+    value: "1000000000000000000", // 1 ETH in wei
+    hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    blockNumber: 18500000,
+    gasUsed: "21000",
+    status: "success",
+    timestamp: Date.now(),
+  };
+
+  console.log("🧪 Simulating stream event with mock data:", mockEventData);
+  handleStreamEvent(mockEventData);
+};
+
+// Add test stream simulation after 10 seconds
+setTimeout(() => {
+  console.log("🧪 Running test stream event simulation...");
+  testStreamEvent();
+}, 10000);

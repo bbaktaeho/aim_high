@@ -140,6 +140,51 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     setIsOnchainNotificationEnabled(newState);
     await chrome.storage.local.set({ isOnchainNotificationEnabled: newState });
     console.log(`🔔 On-chain Notification state changed to: ${newState}`);
+
+    // If enabling, try to connect to stream with current wallet data
+    if (newState) {
+      try {
+        const result = await chrome.storage.local.get(['connectedAccount', 'connectedChainId', 'noditApiKey']);
+        const { connectedAccount, connectedChainId, noditApiKey } = result;
+
+        if (connectedAccount && connectedChainId && noditApiKey) {
+          console.log('🚀 Connecting to Nodit Stream after enabling notification:', {
+            account: connectedAccount,
+            chainId: connectedChainId,
+            hasApiKey: !!noditApiKey
+          });
+
+          const response = await chrome.runtime.sendMessage({
+            type: 'MANAGE_STREAM',
+            action: 'connect',
+            account: connectedAccount,
+            chainId: connectedChainId,
+            apiKey: noditApiKey
+          });
+
+          if (response.success) {
+            console.log('✅ Successfully connected to Nodit Stream');
+          } else {
+            console.error('❌ Failed to connect to Nodit Stream:', response.error);
+          }
+        } else {
+          console.log('⚠️ Wallet not connected. Stream will connect when wallet is connected.');
+        }
+      } catch (error) {
+        console.error('❌ Error connecting to stream:', error);
+      }
+    } else {
+      // If disabling, disconnect from stream
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'MANAGE_STREAM',
+          action: 'disconnect'
+        });
+        console.log('🔌 Disconnected from Nodit Stream');
+      } catch (error) {
+        console.log('Stream was already disconnected');
+      }
+    }
   };
 
   const handleCopyApiKey = async () => {
