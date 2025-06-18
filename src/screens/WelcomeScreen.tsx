@@ -334,6 +334,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSubmit }) => {
           input::placeholder {
             color: #999 !important;
           }
+          
+          input:focus {
+            outline: none !important;
+            border: 2px solid #00d16c !important;
+            box-shadow: 0 0 0 3px rgba(0, 209, 108, 0.2) !important;
+            transition: all 0.2s ease !important;
+          }
+          
+          input {
+            transition: all 0.2s ease !important;
+            border: 2px solid transparent !important;
+          }
         `}
       </style>
     </div>

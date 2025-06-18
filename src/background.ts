@@ -132,6 +132,25 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         console.error("Failed to inject content script:", err);
       }
     }
+
+    // Auto-inject Transaction Tracker if enabled
+    try {
+      const result = await chrome.storage.local.get(["isTransactionCheckerEnabled"]);
+
+      if (result.isTransactionCheckerEnabled) {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ["transaction-checker.js"],
+          });
+          console.log(`🆕 Transaction Tracker auto-injected in new tab ${tabId}: ${tab.url}`);
+        } catch (err) {
+          console.log(`❌ Failed to auto-inject Transaction Tracker in tab ${tabId}:`, err);
+        }
+      }
+    } catch (storageErr) {
+      console.error("Failed to check Transaction Tracker state:", storageErr);
+    }
   }
 });
 

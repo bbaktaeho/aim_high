@@ -77,39 +77,61 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     await chrome.storage.local.set({ isTransactionCheckerEnabled: newState });
     console.log(`🔄 Transaction Tracker state changed to: ${newState}`);
     
-    // 현재 탭에서만 스크립트 주입/제거 처리
+    // 모든 탭에서 스크립트 주입/제거 처리
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const currentTab = tabs[0];
+      const tabs = await chrome.tabs.query({});
+      const httpTabs = tabs.filter(tab => tab.id && tab.url?.startsWith('http'));
       
-      if (!currentTab?.id || !currentTab.url?.startsWith('http')) {
-        return;
-      }
+      console.log(`📋 Found ${httpTabs.length} HTTP tabs to ${newState ? 'inject' : 'cleanup'} Transaction Tracker`);
 
       if (newState) {
-        // 트랜잭션 체커 활성화: transaction-checker.js 주입
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: currentTab.id },
-            files: ['transaction-checker.js']
-          });
-          console.log('Transaction Tracker script injected');
-        } catch (err) {
-          console.error('Failed to inject transaction Tracker script:', err);
-        }
+        // 트랜잭션 체커 활성화: 모든 탭에 transaction-checker.js 주입
+        const injectionResults = await Promise.allSettled(
+          httpTabs.map(async (tab) => {
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id! },
+                files: ['transaction-checker.js']
+              });
+              console.log(`✅ Transaction Tracker injected in tab ${tab.id}: ${tab.url}`);
+              return { success: true, tabId: tab.id };
+            } catch (err) {
+              console.error(`❌ Failed to inject in tab ${tab.id}:`, err);
+              return { success: false, tabId: tab.id, error: err };
+            }
+          })
+        );
+        
+        const successful = injectionResults.filter(result => 
+          result.status === 'fulfilled' && result.value.success
+        ).length;
+        console.log(`🎯 Transaction Tracker injection completed: ${successful}/${httpTabs.length} tabs successful`);
+        
       } else {
-        // 트랜잭션 체커 비활성화: 정리 메시지 전송
-        try {
-          await chrome.tabs.sendMessage(currentTab.id, { 
-            type: 'CLEANUP_TRANSACTION_CHECKER'
-          });
-          console.log('Transaction Tracker cleanup message sent');
-        } catch (err) {
-          console.log('Transaction Tracker script not active, cleanup skipped');
-        }
+        // 트랜잭션 체커 비활성화: 모든 탭에 정리 메시지 전송
+        const cleanupResults = await Promise.allSettled(
+          httpTabs.map(async (tab) => {
+            try {
+              await chrome.tabs.sendMessage(tab.id!, { 
+                type: 'CLEANUP_TRANSACTION_CHECKER'
+              });
+              console.log(`✅ Transaction Tracker cleanup sent to tab ${tab.id}`);
+              return { success: true, tabId: tab.id };
+            } catch (err) {
+              console.log(`⚠️ Cleanup message failed for tab ${tab.id} (script may not be active)`);
+              return { success: false, tabId: tab.id, error: err };
+            }
+          })
+        );
+        
+        const successful = cleanupResults.filter(result => 
+          result.status === 'fulfilled' && result.value.success
+        ).length;
+        console.log(`🧹 Transaction Tracker cleanup completed: ${successful}/${httpTabs.length} tabs successful`);
       }
+      
     } catch (error) {
-      console.error('Error handling transaction Tracker script:', error);
+      console.error('Error handling transaction Tracker script for all tabs:', error);
     }
   };
 
@@ -310,7 +332,7 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
                   다크 모드 UI를 적용합니다.
                 </p>
               </div>
-              <ToggleButton isActive={false} onClick={() => {}} />
+              <ToggleButton isActive={true} onClick={() => {}} />
             </div>
 
             {/* <div style={{
