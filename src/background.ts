@@ -97,9 +97,17 @@ const broadcastStateToAllTabs = async (changes: any) => {
 
 // Connect to Nodit Stream via Content Script
 const connectToStreamIfReady = async () => {
+  console.log("🚀 [connectToStreamIfReady] Starting stream connection process...");
+
   try {
     // Get wallet and API key from storage
     const result = await chrome.storage.local.get(["walletAccount", "walletChainId", "noditApiKey"]);
+    console.log("📋 [connectToStreamIfReady] Storage data retrieved:", {
+      hasWallet: !!result.walletAccount,
+      hasApiKey: !!result.noditApiKey,
+      wallet: result.walletAccount?.substring(0, 10) + "...",
+      chainId: result.walletChainId,
+    });
 
     if (!result.walletAccount || !result.noditApiKey) {
       console.log("❌ Cannot connect to stream: missing wallet or API key");
@@ -131,31 +139,42 @@ const connectToStreamIfReady = async () => {
 
     // Send connection request to any available tab with content script
     const tabs = await chrome.tabs.query({});
-    const httpTabs = tabs.filter((tab) => tab.id && tab.url?.startsWith("http") && activeTabs.has(tab.id));
+    const httpTabs = tabs.filter((tab) => tab.id && tab.url?.startsWith("http"));
 
     if (httpTabs.length === 0) {
-      console.log("ℹ️ No active content script tabs available for stream connection");
+      console.log("ℹ️ No HTTP tabs available for stream connection");
       return;
     }
 
-    // Try to connect via the first available tab
-    const tab = httpTabs[0];
-    if (tab.id) {
-      try {
-        await chrome.tabs.sendMessage(tab.id, {
-          type: "CONNECT_STREAM",
-          account: result.walletAccount,
-          protocol: networkInfo.protocol,
-          network: networkInfo.network,
-          apiKey: result.noditApiKey,
-          messageId: messageId,
-          eventType: eventType,
-        });
+    console.log(`📋 Trying to connect via ${httpTabs.length} HTTP tabs (activeTabs: ${activeTabs.size})`);
 
-        console.log("✅ Stream connection request sent to tab", tab.id);
-      } catch (error) {
-        console.log("ℹ️ Content script not ready for connection:", error);
+    // Try to connect via all available tabs (not just activeTabs)
+    let connectionSent = false;
+    for (const tab of httpTabs) {
+      if (tab.id) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: "CONNECT_STREAM",
+            account: result.walletAccount,
+            protocol: networkInfo.protocol,
+            network: networkInfo.network,
+            apiKey: result.noditApiKey,
+            messageId: messageId,
+            eventType: eventType,
+          });
+
+          console.log("✅ Stream connection request sent to tab", tab.id);
+          connectionSent = true;
+          break; // Stop after first successful send
+        } catch (error) {
+          console.log(`ℹ️ Tab ${tab.id} not ready for connection:`, error);
+          // Continue to next tab
+        }
       }
+    }
+
+    if (!connectionSent) {
+      console.log("⚠️ Could not send CONNECT_STREAM to any tab");
     }
   } catch (error) {
     console.error("❌ Failed to connect to stream:", error);
@@ -210,16 +229,18 @@ const handleStreamEvent = (eventData: any) => {
 const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
   const timestamp = new Date().toLocaleTimeString("ko-KR");
   const tabs = await chrome.tabs.query({});
-  const activeTabs_array = tabs.filter((tab) => tab.id && tab.url?.startsWith("http") && activeTabs.has(tab.id));
+  const httpTabs = tabs.filter((tab) => tab.id && tab.url?.startsWith("http"));
 
-  console.log(`📡 [${timestamp}] Broadcasting stream event to ${activeTabs_array.length} active tabs`);
+  console.log(
+    `📡 [${timestamp}] Broadcasting stream event to ${httpTabs.length} HTTP tabs (activeTabs: ${activeTabs.size})`
+  );
 
-  if (activeTabs_array.length === 0) {
-    console.log(`ℹ️ [${timestamp}] No active content script tabs for stream event broadcast`);
+  if (httpTabs.length === 0) {
+    console.log(`ℹ️ [${timestamp}] No HTTP tabs for stream event broadcast`);
     return;
   }
 
-  const broadcastPromises = activeTabs_array.map(async (tab) => {
+  const broadcastPromises = httpTabs.map(async (tab) => {
     if (tab.id) {
       try {
         await chrome.tabs.sendMessage(tab.id, {
@@ -232,8 +253,6 @@ const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
         return { success: true, tabId: tab.id };
       } catch (error) {
         console.log(`ℹ️ [${timestamp}] Content script not ready in tab ${tab.id}:`, error);
-        // Remove inactive tab from set
-        activeTabs.delete(tab.id);
         return { success: false, tabId: tab.id, error };
       }
     }
@@ -272,27 +291,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-// Auto-inject onchain-notification script when needed
-const autoInjectOnchainNotification = async (tabId: number) => {
-  try {
-    const result = await chrome.storage.local.get(["isOnchainNotificationEnabled"]);
-
-    if (result.isOnchainNotificationEnabled) {
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ["onchain-notification.js"],
-        });
-        console.log(`🔔 On-chain notification auto-injected in tab ${tabId}`);
-      } catch (err) {
-        console.log(`❌ Failed to auto-inject on-chain notification in tab ${tabId}:`, err);
-      }
-    }
-  } catch (storageErr) {
-    console.error("Failed to check on-chain notification state:", storageErr);
-  }
-};
-
 // Listen for content script ready message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CONTENT_SCRIPT_READY" && sender.tab?.id) {
@@ -327,8 +325,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     });
 
-    // Auto-inject onchain notification if enabled
-    autoInjectOnchainNotification(sender.tab.id);
+    // NOTE: onchain-notification.js and nodit-stream.js are automatically injected via manifest.json
+    // No manual injection needed for these scripts
   }
 
   if (message.type === "TX_CHECKER_SEND") {
@@ -428,8 +426,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       console.error("Failed to check Transaction Tracker state:", storageErr);
     }
 
-    // Auto-inject onchain notification if enabled
-    autoInjectOnchainNotification(tabId);
+    // NOTE: onchain-notification.js and nodit-stream.js are automatically injected via manifest.json
+    // No manual injection needed for these scripts
   }
 });
 

@@ -62,8 +62,15 @@ async function connectToStream(config: any) {
 
     socket = io(url, options);
 
+    // Log all socket events for debugging (like test.ts)
+    socket.onAny((eventName: string, ...args: any[]) => {
+      console.log(`🔍 Socket event received: ${eventName}`, args);
+    });
+
     socket.on("connect", () => {
       console.log("🔌 ✅ Connected to Nodit Stream");
+      console.log("✅ Socket.io connection ID:", socket.id);
+      console.log("✅ Socket.io transport:", socket.io.engine?.transport?.name);
       isConnected = true;
 
       // Notify background of successful connection
@@ -79,7 +86,13 @@ async function connectToStream(config: any) {
 
     socket.on("subscription_connected", (message: any) => {
       console.log("🔗 ✅ Stream subscription connected:", message);
+      console.log("📤 Emitting subscription with params:", {
+        messageId,
+        eventType,
+        params: JSON.stringify(params),
+      });
       socket.emit("subscription", messageId, eventType, JSON.stringify(params));
+      console.log("✅ Subscription emission completed");
     });
 
     socket.on("subscription_error", (message: any) => {
@@ -93,7 +106,11 @@ async function connectToStream(config: any) {
     });
 
     socket.on("subscription_event", (message: any) => {
-      console.log("🔔 ✅ Stream event received:", message);
+      console.log("🔔 ===== SUBSCRIPTION EVENT RECEIVED =====");
+      console.log("🔔 Raw stream message received:", JSON.stringify(message, null, 2));
+      console.log("🔔 Message type:", typeof message);
+      console.log("🔔 Message keys:", Object.keys(message || {}));
+      console.log("🔔 ==========================================");
 
       // Forward event to background
       chrome.runtime.sendMessage({
@@ -150,3 +167,8 @@ function disconnectFromStream() {
 }
 
 console.log("🚀 Nodit Stream content script loaded");
+
+// Notify background that this content script is ready
+chrome.runtime.sendMessage({ type: "CONTENT_SCRIPT_READY" }).catch(() => {
+  console.log("ℹ️ Background not ready to receive CONTENT_SCRIPT_READY from nodit-stream");
+});

@@ -8,7 +8,7 @@ const params = {
   description: "test",
   isInstant: true,
   condition: {
-    addresses: ["0x646183948c666C89A9815c2Df44C370ed41A657B"],
+    addresses: ["0x646183948c666C89A9815c2Df44C370ed41A657B"], // 지갑 연동 후 얻은 주소
   },
 };
 
@@ -17,9 +17,9 @@ const options = {
   transports: ["websocket", "polling"],
   path: "/v1/websocket/",
   auth: {
-    apiKey: "oN5gz-nitdyu-HnRV285RU7cVKE0XKEn",
+    apiKey: "oN5gz-nitdyu-HnRV285RU7cVKE0XKEn", // nodit api key
   },
-  query: {
+  query: { // 지갑 연동 후 얻은 chain 정보
     protocol: "ethereum",
     network: "sepolia",
   },

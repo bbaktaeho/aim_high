@@ -172,8 +172,85 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
     await chrome.storage.local.set({ isOnchainNotificationEnabled: newState });
     console.log(`🔔 On-chain Notification state changed to: ${newState}`);
     
-    // TODO: 향후 스트림 연결 기능 구현 예정
-    // 현재는 단순히 상태 변경만 수행
+    if (newState) {
+      // 활성화 시: 직접 스트림 연결 시도
+      console.log('🚀 [OptionScreen] Attempting to connect to stream...');
+      
+      try {
+        // 현재 탭 정보 가져오기
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTab = tabs[0];
+        
+        if (currentTab?.id && currentTab.url?.startsWith('http')) {
+          // 지갑 및 API 키 정보 가져오기
+          const result = await chrome.storage.local.get(['walletAccount', 'walletChainId', 'noditApiKey']);
+          
+          console.log('📋 [OptionScreen] Retrieved data for stream connection:', {
+            hasWallet: !!result.walletAccount,
+            hasApiKey: !!result.noditApiKey,
+            wallet: result.walletAccount?.substring(0, 10) + '...',
+            chainId: result.walletChainId,
+          });
+          
+          if (result.walletAccount && result.noditApiKey) {
+            // 네트워크 정보 매핑
+            const getNetworkInfo = (chainId: number) => {
+              switch (chainId) {
+                case 1: return { protocol: 'ethereum', network: 'mainnet' };
+                case 5: return { protocol: 'ethereum', network: 'goerli' };
+                case 11155111: return { protocol: 'ethereum', network: 'sepolia' };
+                case 137: return { protocol: 'polygon', network: 'mainnet' };
+                case 80001: return { protocol: 'polygon', network: 'mumbai' };
+                case 42161: return { protocol: 'arbitrum', network: 'mainnet' };
+                case 421613: return { protocol: 'arbitrum', network: 'goerli' };
+                default: return { protocol: 'ethereum', network: 'mainnet' };
+              }
+            };
+            
+            const networkInfo = getNetworkInfo(result.walletChainId || 1);
+            
+            // 현재 탭에 CONNECT_STREAM 메시지 전송
+            const streamConfig = {
+              type: 'CONNECT_STREAM',
+              account: result.walletAccount,
+              protocol: networkInfo.protocol,
+              network: networkInfo.network,
+              apiKey: result.noditApiKey,
+              messageId: '1234567890',
+              eventType: 'ADDRESS_ACTIVITY',
+            };
+            
+            console.log('📤 [OptionScreen] Sending CONNECT_STREAM to current tab:', streamConfig);
+            
+            await chrome.tabs.sendMessage(currentTab.id, streamConfig);
+            console.log('✅ [OptionScreen] Stream connection request sent successfully');
+            
+          } else {
+            console.log('❌ [OptionScreen] Missing wallet or API key for stream connection');
+            alert('⚠️ 지갑 또는 API 키 정보가 없습니다. 먼저 설정을 완료해주세요.');
+          }
+        } else {
+          console.log('❌ [OptionScreen] No valid tab for stream connection');
+        }
+      } catch (error) {
+        console.error('❌ [OptionScreen] Failed to connect to stream:', error);
+      }
+    } else {
+      // 비활성화 시: 스트림 연결 해제
+      console.log('🔌 [OptionScreen] Attempting to disconnect from stream...');
+      
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTab = tabs[0];
+        
+        if (currentTab?.id && currentTab.url?.startsWith('http')) {
+          await chrome.tabs.sendMessage(currentTab.id, { type: 'DISCONNECT_STREAM' });
+          console.log('✅ [OptionScreen] Stream disconnection request sent successfully');
+        }
+      } catch (error) {
+        console.error('❌ [OptionScreen] Failed to disconnect from stream:', error);
+      }
+    }
   };
 
   const handleCopyApiKey = async () => {

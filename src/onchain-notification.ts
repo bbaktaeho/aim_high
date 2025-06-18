@@ -31,13 +31,17 @@ function createCharacterUI(): void {
 }
 
 function showBalloon(message: string): void {
+  console.log("🎈 [showBalloon] Starting balloon creation with message:", message);
+
   // Remove existing balloon
   const existingBalloon = document.getElementById(BALLOON_ID);
   if (existingBalloon) {
+    console.log("🗑️ [showBalloon] Removing existing balloon");
     existingBalloon.remove();
   }
 
   // Create balloon
+  console.log("🎈 [showBalloon] Creating new balloon element");
   const balloon = document.createElement("div");
   balloon.id = BALLOON_ID;
   balloon.style.position = "fixed";
@@ -72,14 +76,18 @@ function showBalloon(message: string): void {
     "></div>
   `;
 
+  console.log("📍 [showBalloon] Appending balloon to document body");
   document.body.appendChild(balloon);
+  console.log("✅ [showBalloon] Balloon successfully added to DOM");
 
-  // Auto-hide balloon after 3 seconds
+  // Auto-hide balloon after 10 seconds
   setTimeout(() => {
     if (balloon && balloon.parentNode) {
+      console.log("⏰ [showBalloon] Auto-removing balloon after 10 seconds");
       balloon.remove();
+      console.log("🗑️ [showBalloon] Balloon removed from DOM");
     }
-  }, 3000);
+  }, 10000);
 }
 
 // Character display function - no balloon needed
@@ -114,10 +122,42 @@ chrome.storage.onChanged.addListener((changes: { [key: string]: chrome.storage.S
 
 // Listen for stream events
 chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+  console.log("🔔 [onchain-notification] Message received:", message);
+
   if (message.type === "STREAM_EVENT") {
-    console.log("🔔 Stream event received in content script:", message.message);
+    console.log("🔔 ===== STREAM EVENT IN ONCHAIN NOTIFICATION =====");
+    console.log("🔔 Message content:", message.message);
+    console.log("🔔 Event data:", message.data);
+    console.log("🔔 Timestamp:", message.timestamp);
+    console.log("🔔 ================================================");
+
+    // Check if character exists before showing balloon
+    const character = document.getElementById(CHARACTER_ID);
+    if (!character) {
+      console.log("⚠️ Character not found, creating character UI first");
+      createCharacterUI();
+    }
 
     // Show balloon with the message
+    console.log("🎈 Showing balloon with message:", message.message);
     showBalloon(message.message);
+
+    console.log("✅ Balloon display completed");
   }
+
+  if (message.type === "TOGGLE_ONCHAIN_NOTIFICATION") {
+    console.log("🔔 [onchain-notification] TOGGLE_ONCHAIN_NOTIFICATION received:", message.isEnabled);
+
+    if (message.isEnabled) {
+      // 활성화 시 캐릭터 생성 + 테스트 말풍선 표시
+      createCharacterUI();
+      console.log("🧪 [onchain-notification] Showing test balloon for activation");
+      showBalloon("감지");
+    } else {
+      // 비활성화 시 캐릭터 제거
+      removeCharacterUI();
+    }
+  }
+
+  return true; // Keep message channel open
 });
