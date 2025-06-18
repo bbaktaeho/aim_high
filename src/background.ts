@@ -1,5 +1,3 @@
-import { noditStreamService } from "./services/noditStream";
-
 // Network mapping helper
 const getNetworkFromChainId = (chainId: string | number): { protocol: string; network: string } | null => {
   const id = typeof chainId === "string" ? parseInt(chainId, 16) : chainId;
@@ -36,10 +34,11 @@ chrome.runtime.onInstalled.addListener(() => {
 // Store active tab IDs where content script is loaded
 const activeTabs = new Set<number>();
 
-// Stream connection state
-let isStreamConnected = false;
-let currentStreamAccount: string | null = null;
-let currentChainId: number | null = null;
+// Stream connection state (temporarily disabled)
+// TODO: Re-implement stream connection logic
+// let isStreamConnected = false;
+// let currentStreamAccount: string | null = null;
+// let currentChainId: number | null = null;
 
 // Broadcast state changes to all active tabs
 const broadcastStateToAllTabs = async (changes: any) => {
@@ -82,147 +81,37 @@ const broadcastStateToAllTabs = async (changes: any) => {
 
   await Promise.allSettled(broadcastPromises);
 
-  // Handle onchain notification stream connection
+  // Handle onchain notification stream connection (temporarily disabled)
+  // TODO: Re-implement stream connection logic
   if (changes.isOnchainNotificationEnabled) {
-    if (changes.isOnchainNotificationEnabled.newValue) {
-      // Connect to stream when enabled
-      await connectToStreamIfReady();
-    } else {
-      // Disconnect from stream when disabled
-      disconnectFromStream();
-    }
+    console.log(`🔔 On-chain Notification toggled to: ${changes.isOnchainNotificationEnabled.newValue}`);
+    // Stream connection logic will be re-implemented later
   }
 };
 
-// Connect to Nodit Stream if conditions are met
+// Connect to Nodit Stream if conditions are met (temporarily disabled)
+// TODO: Re-implement stream connection logic
+/*
 const connectToStreamIfReady = async () => {
-  try {
-    const result = await chrome.storage.local.get([
-      "isOnchainNotificationEnabled",
-      "connectedAccount",
-      "connectedChainId",
-      "noditApiKey",
-    ]);
-
-    const { isOnchainNotificationEnabled, connectedAccount, connectedChainId, noditApiKey } = result;
-
-    if (isOnchainNotificationEnabled && connectedAccount && connectedChainId && noditApiKey) {
-      const networkInfo = getNetworkFromChainId(connectedChainId);
-
-      if (networkInfo) {
-        console.log("🚀 Connecting to Nodit Stream:", {
-          account: connectedAccount,
-          chainId: connectedChainId,
-          protocol: networkInfo.protocol,
-          network: networkInfo.network,
-        });
-
-        console.log("🔄 Attempting to connect to Nodit Stream...");
-        const success = await noditStreamService.connect(
-          connectedAccount,
-          networkInfo.protocol,
-          networkInfo.network,
-          noditApiKey,
-          handleStreamEvent
-        );
-
-        if (success) {
-          isStreamConnected = true;
-          currentStreamAccount = connectedAccount;
-          currentChainId = connectedChainId;
-          console.log("✅ Successfully connected to Nodit Stream");
-          console.log("🔍 Connection status:", {
-            isStreamConnected,
-            currentStreamAccount,
-            currentChainId,
-            connectionInfo: noditStreamService.getConnectionInfo(),
-          });
-        } else {
-          console.error("❌ Failed to connect to Nodit Stream");
-          console.error("🔍 Connection failure details:", {
-            account: connectedAccount,
-            protocol: networkInfo.protocol,
-            network: networkInfo.network,
-            hasApiKey: !!noditApiKey,
-            connectionInfo: noditStreamService.getConnectionInfo(),
-          });
-        }
-      } else {
-        console.error("❌ Unsupported chain ID for stream:", connectedChainId);
-      }
-    } else {
-      console.log("⚠️ Missing required data for stream connection:", {
-        isOnchainNotificationEnabled,
-        connectedAccount: !!connectedAccount,
-        connectedChainId: !!connectedChainId,
-        noditApiKey: !!noditApiKey,
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error connecting to stream:", error);
-  }
+  // Stream connection logic temporarily disabled
+  console.log("⚠️ Stream connection temporarily disabled");
 };
 
-// Disconnect from Nodit Stream
+// Disconnect from Nodit Stream (temporarily disabled)
 const disconnectFromStream = () => {
-  if (isStreamConnected) {
-    noditStreamService.disconnect();
-    isStreamConnected = false;
-    currentStreamAccount = null;
-    currentChainId = null;
-    console.log("🔌 Disconnected from Nodit Stream");
-  }
+  // Stream disconnection logic temporarily disabled
+  console.log("⚠️ Stream disconnection temporarily disabled");
 };
+*/
 
 // Handle stream events
+// Handle stream events (temporarily disabled)
+// TODO: Re-implement stream event handling
+/*
 const handleStreamEvent = (eventData: any) => {
-  const timestamp = new Date().toLocaleTimeString("ko-KR");
-  console.log(`📨 [${timestamp}] ===== STREAM EVENT RECEIVED =====`);
-  console.log(`📨 [${timestamp}] Full raw stream data:`, JSON.stringify(eventData, null, 2));
-  console.log(`📊 [${timestamp}] Stream event data type:`, typeof eventData);
-  console.log(`📊 [${timestamp}] Stream event keys:`, Object.keys(eventData || {}));
-  console.log(`📊 [${timestamp}] Stream event values:`, Object.values(eventData || {}));
-  console.log(`📨 [${timestamp}] =====================================`);
-
-  // Format the stream data for display
-  const { from, to, value, hash, status } = eventData;
-  const networkInfo = getNetworkFromChainId(currentChainId || 1);
-  const chainName = networkInfo ? `${networkInfo.protocol}/${networkInfo.network}` : "Unknown Chain";
-
-  const shortFrom = from ? `${from.slice(0, 6)}...${from.slice(-4)}` : "Unknown";
-  const shortTo = to ? `${to.slice(0, 6)}...${to.slice(-4)}` : "Unknown";
-  const statusIcon = status === "success" ? "✅" : status === "failed" ? "❌" : "⏳";
-
-  // Format value to ETH if it's a valid number
-  let displayValue = value || "0";
-  if (value && value !== "0" && value !== "0x0") {
-    try {
-      const valueInWei = typeof value === "string" && value.startsWith("0x") ? parseInt(value, 16) : parseInt(value);
-      const valueInEth = valueInWei / Math.pow(10, 18);
-      displayValue = valueInEth > 0.001 ? `${valueInEth.toFixed(4)} ETH` : `${valueInWei} wei`;
-    } catch (e) {
-      displayValue = value;
-    }
-  }
-
-  const displayMessage = `🔗 트랜잭션 감지! [${chainName}]
-From: ${shortFrom}
-To: ${shortTo}
-Value: ${displayValue}
-Status: ${statusIcon} ${status || "처리중"}`;
-
-  const formattedData = {
-    chain: chainName,
-    from,
-    to,
-    value: displayValue,
-    status: status || "processing",
-    hash,
-  };
-
-  // Broadcast to all tabs
-  broadcastStreamEventToAllTabs(displayMessage, formattedData);
+  console.log("📨 Stream event handling temporarily disabled");
 };
+*/
 
 // Broadcast stream events to all tabs
 const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
@@ -349,30 +238,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 
-  // Handle stream management requests
+  // Handle stream management requests (temporarily disabled)
+  // TODO: Re-implement stream management
   if (message.type === "MANAGE_STREAM") {
-    const { action, account, chainId, apiKey } = message;
-
-    if (action === "connect") {
-      // Store connection data and connect
-      chrome.storage.local
-        .set({
-          connectedAccount: account,
-          connectedChainId: chainId,
-          noditApiKey: apiKey,
-        })
-        .then(() => {
-          connectToStreamIfReady()
-            .then(() => sendResponse({ success: true }))
-            .catch((error) => sendResponse({ success: false, error: error.message }));
-        });
-    } else if (action === "disconnect") {
-      disconnectFromStream();
-      chrome.storage.local.remove(["connectedAccount", "connectedChainId"]);
-      sendResponse({ success: true });
-    }
-
-    return true; // Keep message channel open for async response
+    console.log("⚠️ Stream management temporarily disabled");
+    sendResponse({ success: false, error: "Stream management temporarily disabled" });
+    return true;
   }
 });
 
@@ -424,7 +295,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   activeTabs.delete(tabId);
 });
 
-// Initialize stream connection on startup if conditions are met
+// Initialize stream connection on startup if conditions are met (temporarily disabled)
+// TODO: Re-implement startup stream connection
+/*
 chrome.runtime.onStartup.addListener(() => {
   console.log("🚀 Extension startup, checking for stream connection...");
   connectToStreamIfReady();
@@ -435,28 +308,17 @@ setTimeout(() => {
   console.log("🔄 Extension loaded, checking for stream connection...");
   connectToStreamIfReady();
 }, 1000);
+*/
 
-// Test function for stream simulation
+// Test function for stream simulation (temporarily disabled)
+// TODO: Re-implement stream testing
+/*
 const testStreamEvent = () => {
-  console.log("🧪 Testing stream event simulation...");
-
-  const mockEventData = {
-    from: "0x742d35Cc6634C0532925a3b8D4Cc23d3b8f5e5e5",
-    to: "0x1234567890123456789012345678901234567890",
-    value: "1000000000000000000", // 1 ETH in wei
-    hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    blockNumber: 18500000,
-    gasUsed: "21000",
-    status: "success",
-    timestamp: Date.now(),
-  };
-
-  console.log("🧪 Simulating stream event with mock data:", mockEventData);
-  handleStreamEvent(mockEventData);
+  console.log("🧪 Stream testing temporarily disabled");
 };
 
 // Add test stream simulation after 10 seconds
 setTimeout(() => {
-  console.log("🧪 Running test stream event simulation...");
-  testStreamEvent();
+  console.log("🧪 Stream testing temporarily disabled");
 }, 10000);
+*/
