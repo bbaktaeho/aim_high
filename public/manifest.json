@@ -29,6 +29,12 @@
       "js": ["onchain-notification.js"],
       "run_at": "document_idle",
       "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["nodit-stream.js"],
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "content_security_policy": {

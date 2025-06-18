@@ -65,7 +65,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
   // TODO: Re-implement stream connection logic
   useEffect(() => {
     // Stream connection logic temporarily disabled
-    console.log('⚠️ Stream connection temporarily disabled');
   }, [account, chainId, noditApiKey]);
 
   // Transaction data listener

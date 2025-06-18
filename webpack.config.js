@@ -13,6 +13,7 @@ module.exports = {
     transaction: "./src/transaction.tsx",
     "transaction-checker": "./src/transaction-checker.ts",
     "onchain-notification": "./src/onchain-notification.ts",
+    "nodit-stream": "./src/nodit-stream.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

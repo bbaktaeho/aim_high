@@ -34,11 +34,14 @@ chrome.runtime.onInstalled.addListener(() => {
 // Store active tab IDs where content script is loaded
 const activeTabs = new Set<number>();
 
-// Stream connection state (temporarily disabled)
-// TODO: Re-implement stream connection logic
-// let isStreamConnected = false;
-// let currentStreamAccount: string | null = null;
-// let currentChainId: number | null = null;
+// Stream connection state
+let socket: any = null;
+let isStreamConnected = false;
+let currentStreamAccount: string | null = null;
+let currentChainId: number | null = null;
+let messageId = "1234567890";
+const eventType = "ADDRESS_ACTIVITY";
+const streamUrl = "wss://web3.nodit.io/v1/websocket";
 
 // Broadcast state changes to all active tabs
 const broadcastStateToAllTabs = async (changes: any) => {
@@ -81,46 +84,143 @@ const broadcastStateToAllTabs = async (changes: any) => {
 
   await Promise.allSettled(broadcastPromises);
 
-  // Handle onchain notification stream connection (temporarily disabled)
-  // TODO: Re-implement stream connection logic
+  // Handle onchain notification stream connection
   if (changes.isOnchainNotificationEnabled) {
     console.log(`🔔 On-chain Notification toggled to: ${changes.isOnchainNotificationEnabled.newValue}`);
-    // Stream connection logic will be re-implemented later
+    if (changes.isOnchainNotificationEnabled.newValue) {
+      connectToStreamIfReady();
+    } else {
+      disconnectFromStream();
+    }
   }
 };
 
-// Connect to Nodit Stream if conditions are met (temporarily disabled)
-// TODO: Re-implement stream connection logic
-/*
+// Connect to Nodit Stream via Content Script
 const connectToStreamIfReady = async () => {
-  // Stream connection logic temporarily disabled
-  console.log("⚠️ Stream connection temporarily disabled");
+  try {
+    // Get wallet and API key from storage
+    const result = await chrome.storage.local.get(["walletAccount", "walletChainId", "noditApiKey"]);
+
+    if (!result.walletAccount || !result.noditApiKey) {
+      console.log("❌ Cannot connect to stream: missing wallet or API key");
+      console.log("📋 Available data:", {
+        hasWallet: !!result.walletAccount,
+        hasApiKey: !!result.noditApiKey,
+        wallet: result.walletAccount?.substring(0, 10) + "...",
+        chainId: result.walletChainId,
+      });
+      return;
+    }
+
+    if (isStreamConnected && currentStreamAccount === result.walletAccount) {
+      console.log("✅ Stream already connected for this account");
+      return;
+    }
+
+    const networkInfo = getNetworkFromChainId(result.walletChainId || 1);
+    if (!networkInfo) {
+      console.log("❌ Unsupported network for stream connection:", result.walletChainId);
+      return;
+    }
+
+    console.log("🚀 Requesting stream connection via content script...", {
+      account: result.walletAccount,
+      network: networkInfo,
+      apiKey: result.noditApiKey?.substring(0, 10) + "...",
+    });
+
+    // Send connection request to any available tab with content script
+    const tabs = await chrome.tabs.query({});
+    const httpTabs = tabs.filter((tab) => tab.id && tab.url?.startsWith("http") && activeTabs.has(tab.id));
+
+    if (httpTabs.length === 0) {
+      console.log("ℹ️ No active content script tabs available for stream connection");
+      return;
+    }
+
+    // Try to connect via the first available tab
+    const tab = httpTabs[0];
+    if (tab.id) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "CONNECT_STREAM",
+          account: result.walletAccount,
+          protocol: networkInfo.protocol,
+          network: networkInfo.network,
+          apiKey: result.noditApiKey,
+          messageId: messageId,
+          eventType: eventType,
+        });
+
+        console.log("✅ Stream connection request sent to tab", tab.id);
+      } catch (error) {
+        console.log("ℹ️ Content script not ready for connection:", error);
+      }
+    }
+  } catch (error) {
+    console.error("❌ Failed to connect to stream:", error);
+  }
 };
 
-// Disconnect from Nodit Stream (temporarily disabled)
-const disconnectFromStream = () => {
-  // Stream disconnection logic temporarily disabled
-  console.log("⚠️ Stream disconnection temporarily disabled");
+// Disconnect from Nodit Stream via Content Script
+const disconnectFromStream = async () => {
+  console.log("🔌 Requesting stream disconnection...");
+
+  // Send disconnection request to any available tab with content script
+  const tabs = await chrome.tabs.query({});
+  const httpTabs = tabs.filter((tab) => tab.id && tab.url?.startsWith("http") && activeTabs.has(tab.id));
+
+  if (httpTabs.length === 0) {
+    console.log("ℹ️ No active content script tabs available for stream disconnection");
+    // Safely reset local state without error
+    isStreamConnected = false;
+    currentStreamAccount = null;
+    currentChainId = null;
+    return;
+  }
+
+  // Try to disconnect via the first available tab with active content script
+  const tab = httpTabs[0];
+  if (tab.id) {
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: "DISCONNECT_STREAM",
+      });
+
+      console.log("✅ Stream disconnection request sent to tab", tab.id);
+    } catch (error) {
+      console.log("ℹ️ Content script not ready for disconnection, resetting state locally:", error);
+      // Force local state reset without throwing error
+      isStreamConnected = false;
+      currentStreamAccount = null;
+      currentChainId = null;
+    }
+  }
 };
-*/
 
 // Handle stream events
-// Handle stream events (temporarily disabled)
-// TODO: Re-implement stream event handling
-/*
 const handleStreamEvent = (eventData: any) => {
-  console.log("📨 Stream event handling temporarily disabled");
+  console.log("📨 Stream event received:", eventData);
+
+  // Broadcast event to all tabs to show notification
+  broadcastStreamEventToAllTabs("감지", eventData);
 };
-*/
 
 // Broadcast stream events to all tabs
 const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
   const timestamp = new Date().toLocaleTimeString("ko-KR");
   const tabs = await chrome.tabs.query({});
-  console.log(`📡 [${timestamp}] Broadcasting stream event to ${tabs.length} tabs`);
+  const activeTabs_array = tabs.filter((tab) => tab.id && tab.url?.startsWith("http") && activeTabs.has(tab.id));
 
-  const broadcastPromises = tabs.map(async (tab) => {
-    if (tab.id && tab.url?.startsWith("http")) {
+  console.log(`📡 [${timestamp}] Broadcasting stream event to ${activeTabs_array.length} active tabs`);
+
+  if (activeTabs_array.length === 0) {
+    console.log(`ℹ️ [${timestamp}] No active content script tabs for stream event broadcast`);
+    return;
+  }
+
+  const broadcastPromises = activeTabs_array.map(async (tab) => {
+    if (tab.id) {
       try {
         await chrome.tabs.sendMessage(tab.id, {
           type: "STREAM_EVENT",
@@ -131,11 +231,13 @@ const broadcastStreamEventToAllTabs = async (message: string, data?: any) => {
         console.log(`📤 [${timestamp}] Stream event sent to tab ${tab.id}`);
         return { success: true, tabId: tab.id };
       } catch (error) {
-        console.log(`❌ [${timestamp}] Failed to send stream event to tab ${tab.id}:`, error);
+        console.log(`ℹ️ [${timestamp}] Content script not ready in tab ${tab.id}:`, error);
+        // Remove inactive tab from set
+        activeTabs.delete(tab.id);
         return { success: false, tabId: tab.id, error };
       }
     }
-    return { success: false, tabId: tab.id, reason: "invalid_url" };
+    return { success: false, tabId: tab.id, reason: "no_tab_id" };
   });
 
   const results = await Promise.allSettled(broadcastPromises);
@@ -150,6 +252,23 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local") {
     console.log("📦 Storage changed:", changes);
     broadcastStateToAllTabs(changes);
+
+    // Auto-connect to stream when wallet is connected and onchain notification is enabled
+    if (changes.walletAccount && changes.walletAccount.newValue) {
+      console.log("💼 Wallet connected, checking if stream should be started");
+      chrome.storage.local.get(["isOnchainNotificationEnabled"], (result) => {
+        if (result.isOnchainNotificationEnabled) {
+          console.log("🔔 On-chain notification is enabled, connecting to stream");
+          connectToStreamIfReady();
+        }
+      });
+    }
+
+    // Disconnect stream when wallet is disconnected
+    if (changes.walletAccount && !changes.walletAccount.newValue) {
+      console.log("💼 Wallet disconnected, stopping stream");
+      disconnectFromStream();
+    }
   }
 });
 
@@ -238,11 +357,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 
-  // Handle stream management requests (temporarily disabled)
-  // TODO: Re-implement stream management
-  if (message.type === "MANAGE_STREAM") {
-    console.log("⚠️ Stream management temporarily disabled");
-    sendResponse({ success: false, error: "Stream management temporarily disabled" });
+  // Handle stream events from content script
+  if (message.type === "STREAM_CONNECTED") {
+    console.log("✅ Stream connected for account:", message.account);
+    isStreamConnected = true;
+    currentStreamAccount = message.account;
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "STREAM_EVENT_RECEIVED") {
+    console.log("🔔 Stream event received from content script:", message.data);
+    handleStreamEvent(message.data);
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "STREAM_DISCONNECTED") {
+    console.log("🔌 Stream disconnected:", message.reason);
+    isStreamConnected = false;
+    currentStreamAccount = null;
+    currentChainId = null;
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === "STREAM_CONNECTION_ERROR" || message.type === "STREAM_ERROR") {
+    console.error("❌ Stream error:", message.error);
+    isStreamConnected = false;
+    sendResponse({ success: true });
     return true;
   }
 });
