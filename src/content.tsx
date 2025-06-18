@@ -533,7 +533,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       border-radius: 20px;
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-      max-width: 600px;
+      max-width: 480px;
       margin: 20px auto;
       min-height: auto;
     ">
@@ -541,32 +541,32 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       <header style="
         position: relative;
         background: #1a1a1a;
-        padding: 24px;
+        padding: 20px;
         border-bottom: 1px solid ${borderColor};
       ">
         <h2 style="
           margin: 0;
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 700;
         ">Multi-Chain Analysis</h2>
         <p style="
           margin: 6px 0 0;
           color: #8fe7b7;
-          font-size: 16px;
+          font-size: 15px;
         ">
           <span style="color: ${primaryColor};">${addressType.toUpperCase()} 주소</span> - ${networks.length}개의 활성 네트워크가 감지되었습니다.
         </p>
       </header>
 
       <!-- Address Info Section -->
-              <section style="padding: 24px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 18px;">분석 대상 주소</h3>
+      <section style="padding: 20px; margin-bottom: 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 17px;">분석 대상 주소</h3>
         <div style="
           background: #0fc18c;
           color: #000;
           padding: 12px;
           border-radius: 12px;
-          font-size: 15px;
+          font-size: 14px;
           margin-top: 8px;
           word-break: break-all;
           text-align: center;
@@ -597,12 +597,12 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
           <div style="text-align: center; flex: 1;">
             <strong style="
               display: block;
-              font-size: 22px;
+              font-size: 20px;
               color: ${primaryColor};
               margin-bottom: 6px;
             ">${networks.length}</strong>
             <span style="
-              font-size: 13px;
+              font-size: 12px;
               color: ${textSecondary};
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -611,12 +611,12 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
           <div style="text-align: center; flex: 1;">
             <strong style="
               display: block;
-              font-size: 22px;
+              font-size: 20px;
               color: ${primaryColor};
               margin-bottom: 6px;
             ">${totalTransactions.toLocaleString()}</strong>
             <span style="
-              font-size: 13px;
+              font-size: 12px;
               color: ${textSecondary};
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -625,12 +625,12 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
           <div style="text-align: center; flex: 1;">
             <strong style="
               display: block;
-              font-size: 22px;
+              font-size: 20px;
               color: ${primaryColor};
               margin-bottom: 6px;
             ">${totalTokenTypes}</strong>
             <span style="
-              font-size: 13px;
+              font-size: 12px;
               color: ${textSecondary};
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -640,7 +640,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       </section>
 
       <!-- Networks Section -->
-      <div style="padding: 0 16px 16px;">
+      <div style="padding: 0 16px 16px; overflow: hidden;">
   `;
 
       // 각 네트워크별 정보 표시
@@ -655,10 +655,14 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       html += `
         <section style="
           background: ${cardColor};
-          padding: 24px;
+          padding: 16px;
           border-radius: 16px;
           margin-bottom: 20px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          position: relative;
+          z-index: 1;
+          clear: both;
+          display: block;
         ">
           <!-- Network Header -->
           <div style="
@@ -675,14 +679,14 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
               <div>
                 <h4 style="
                   margin: 0;
-                  font-size: 18px;
+                  font-size: 17px;
                   font-weight: 700;
                   text-transform: capitalize;
                   color: ${textPrimary};
                 ">${protocol}</h4>
                 <p style="
                   margin: 0;
-                  font-size: 14px;
+                  font-size: 13px;
                   color: ${textSecondary};
                   text-transform: uppercase;
                 ">${networkName}</p>
@@ -692,7 +696,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
               `<div style="
                 text-align: right;
                 color: ${textSecondary};
-                font-size: 16px;
+                font-size: 15px;
               ">${transactionCount.transactionCount.toLocaleString()} 트랜잭션</div>` : ''
             }
           </div>
@@ -845,7 +849,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
                 background: none;
                 border: none;
                 color: ${primaryColor};
-                font-size: 16px;
+                font-size: 15px;
                 font-weight: 600;
                 cursor: pointer;
                 border-bottom: 2px solid ${primaryColor};
@@ -863,7 +867,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
                 background: none;
                 border: none;
                 color: ${textSecondary};
-                font-size: 16px;
+                font-size: 15px;
                 font-weight: 600;
                 cursor: pointer;
                 border-bottom: 2px solid transparent;
@@ -881,7 +885,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
                 background: none;
                 border: none;
                 color: ${textSecondary};
-                font-size: 16px;
+                font-size: 15px;
                 font-weight: 600;
                 cursor: pointer;
                 border-bottom: 2px solid transparent;
@@ -935,7 +939,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
         } else {
           html += `
             <div style="text-align: center; padding: 24px; color: #64748B;">
-              <div style="font-size: 16px;">No TRC-20 tokens found</div>
+              <div style="font-size: 15px;">No TRC-20 tokens found</div>
             </div>
           `;
         }
@@ -987,7 +991,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
         } else {
           html += `
             <div style="text-align: center; padding: 24px; color: #64748B;">
-              <div style="font-size: 16px;">No TRC-10 assets found</div>
+              <div style="font-size: 15px;">No TRC-10 assets found</div>
             </div>
           `;
         }
@@ -1115,7 +1119,7 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
         } else {
           html += `
             <div style="text-align: center; padding: 24px; color: #64748B;">
-              <div style="font-size: 16px;">No tokens found</div>
+              <div style="font-size: 15px;">No tokens found</div>
             </div>
           `;
         }
@@ -1178,9 +1182,8 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       }
     }
 
-    html += `
-        </div>
-      </div>
+            html += `
+        </section>
     `;
   });
 
@@ -1191,8 +1194,10 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
       <footer style="
         text-align: center;
         font-size: 13px;
-        padding: 12px;
+        padding: 12px 16px;
         color: #888;
+        border-top: 1px solid ${borderColor};
+        margin-top: 8px;
       ">
         <p style="margin: 0;">Powered by Nodit</p>
       </footer>
@@ -1340,11 +1345,11 @@ const renderTokenItems = (tokens: any[], startIndex: number = 0) => {
           <div style="
             font-weight: bold;
             color: #fff;
-            font-size: 16px;
+            font-size: 15px;
             margin-bottom: 4px;
           ">${symbol}</div>
           <div style="
-            font-size: 14px;
+            font-size: 13px;
             color: #aaa;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1353,13 +1358,13 @@ const renderTokenItems = (tokens: any[], startIndex: number = 0) => {
         </div>
         <div style="text-align: right;">
           <div style="
-            font-size: 16px;
+            font-size: 15px;
             color: #fff;
             font-weight: 600;
           ">${displayBalance}</div>
           <div style="
             color: #aaa;
-            font-size: 13px;
+            font-size: 12px;
           ">#${tokenIndex + 1}</div>
         </div>
       </div>
@@ -1392,30 +1397,30 @@ const renderAssetItems = (assets: any[], startIndex: number = 0) => {
           <div style="
             font-weight: bold;
             color: #fff;
-            font-size: 16px;
+            font-size: 15px;
             margin-bottom: 4px;
           ">${symbol}</div>
           <div style="
-            font-size: 14px;
+            font-size: 13px;
             color: #aaa;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           ">${name}</div>
           <div style="
-            font-size: 12px;
+            font-size: 11px;
             color: #aaa;
           ">ID: ${assetId}</div>
         </div>
         <div style="text-align: right;">
           <div style="
-            font-size: 16px;
+            font-size: 15px;
             color: #fff;
             font-weight: 600;
           ">${displayBalance}</div>
           <div style="
             color: #aaa;
-            font-size: 13px;
+            font-size: 12px;
           ">#${assetIndex + 1}</div>
         </div>
       </div>
@@ -1496,7 +1501,7 @@ const renderTransactionItems = (transactions: any[], startIndex: number = 0, acc
             </div>
             
             <div style="
-              font-size: 16px;
+              font-size: 15px;
               font-weight: 600;
               color: ${isOutgoing ? '#EF4444' : '#00ffab'};
               text-align: right;
@@ -1818,8 +1823,8 @@ const styles = {
     borderRadius: '0',
     boxShadow: 'none',
     zIndex: 2147483647, // Maximum z-index value
-    maxWidth: '600px',
-    minWidth: '480px',
+    maxWidth: '480px',
+    minWidth: '380px',
     maxHeight: '500px',
     fontSize: '14px',
     lineHeight: '1.5',
@@ -1888,8 +1893,8 @@ const createPopupBox = () => {
     border-radius: 20px !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
     z-index: 2147483647 !important;
-    max-width: 600px !important;
-    min-width: 480px !important;
+    max-width: 480px !important;
+    min-width: 380px !important;
     max-height: 500px !important;
     font-size: 14px !important;
     line-height: 1.5 !important;
@@ -2180,7 +2185,7 @@ const initializeContentScript = () => {
       let top = rect.bottom + 12 + window.scrollY;
       
       // Adjust horizontal position if popup would go off-screen
-      const popupWidth = 450; // maxWidth from styles
+      const popupWidth = 480; // maxWidth from styles
       if (left + popupWidth > window.innerWidth) {
         left = window.innerWidth - popupWidth - 20;
       }
