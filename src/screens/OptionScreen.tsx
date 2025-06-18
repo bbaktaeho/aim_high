@@ -13,17 +13,42 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
+  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    // Load extension state and API key
-    chrome.storage.local.get(['isEnabled', 'isTransactionCheckerEnabled', 'isOnchainNotificationEnabled', 'noditApiKey'], (result) => {
+    // Load extension state, API key, and wallet connection status
+    chrome.storage.local.get(['isEnabled', 'isTransactionCheckerEnabled', 'isOnchainNotificationEnabled', 'noditApiKey', 'walletAccount'], (result) => {
       console.log('Extension state loaded:', result);
       setIsEnabled(result.isEnabled ?? false);
       setIsTransactionCheckerEnabled(result.isTransactionCheckerEnabled ?? false);
       setIsOnchainNotificationEnabled(result.isOnchainNotificationEnabled ?? false);
       setApiKey(result.noditApiKey || '');
+      setIsWalletConnected(!!result.walletAccount);
     });
-  }, []);
+
+    // Listen for wallet connection changes
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
+      if (area === 'local' && changes.walletAccount) {
+        const isConnected = !!changes.walletAccount.newValue;
+        setIsWalletConnected(isConnected);
+        console.log('💼 Wallet connection status changed:', isConnected);
+        
+        // 지갑이 연결 해제되면 On-chain Notification도 자동으로 비활성화
+        if (!isConnected && isOnchainNotificationEnabled) {
+          setIsOnchainNotificationEnabled(false);
+          chrome.storage.local.set({ isOnchainNotificationEnabled: false });
+          console.log('🔔 On-chain Notification auto-disabled due to wallet disconnection');
+        }
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [isOnchainNotificationEnabled]);
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -136,6 +161,12 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
   };
 
   const handleOnchainNotificationToggle = async () => {
+    // 지갑이 연결되지 않은 상태에서 활성화하려고 하면 경고
+    if (!isWalletConnected && !isOnchainNotificationEnabled) {
+      alert('⚠️ On-chain Notification을 사용하려면 먼저 지갑을 연결해주세요!');
+      return;
+    }
+
     const newState = !isOnchainNotificationEnabled;
     setIsOnchainNotificationEnabled(newState);
     await chrome.storage.local.set({ isOnchainNotificationEnabled: newState });
@@ -302,19 +333,28 @@ export const OptionScreen: React.FC<OptionScreenProps> = ({ onBack, onReset }) =
               alignItems: 'center',
               padding: '12px 0',
               borderBottom: '1px solid #333',
+              opacity: isWalletConnected ? 1 : 0.5,
             }}>
               <div>
                 <strong>On-chain Notification</strong>
                 <p style={{
                   fontSize: '13px',
-                  color: '#aaa',
+                  color: isWalletConnected ? '#aaa' : '#666',
                   marginTop: '4px',
                   margin: '4px 0 0 0',
                 }}>
-                  내 계정의 온체인 활동이 감지되면 알려줍니다.
+                  {isWalletConnected 
+                    ? '내 계정의 온체인 활동이 감지되면 알려줍니다.'
+                    : '⚠️ 지갑 연결이 필요합니다.'
+                  }
                 </p>
               </div>
-              <ToggleButton isActive={isOnchainNotificationEnabled} onClick={handleOnchainNotificationToggle} />
+              <ToggleButton 
+                isActive={isOnchainNotificationEnabled} 
+                onClick={isWalletConnected ? handleOnchainNotificationToggle : () => {
+                  alert('⚠️ On-chain Notification을 사용하려면 먼저 지갑을 연결해주세요!');
+                }}
+              />
             </div>
 
             <div style={{
