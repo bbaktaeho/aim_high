@@ -74,16 +74,28 @@ function createCharacterUI(): void {
   intervalId = window.setInterval(updateBalloon, 2000);
 }
 
-function updateBalloon(): void {
+let currentMessage: string = "";
+
+function updateBalloon(customMessage?: string): void {
   const balloon = document.getElementById(BALLOON_ID);
   if (!balloon) return;
 
   const textElement = balloon.querySelector(".nodit-balloon-text") as HTMLDivElement;
   if (!textElement) return;
 
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  textElement.textContent = `트랜잭션이 도착했어요!\n${timeStr}`;
+  if (customMessage) {
+    // Use custom message from webhook
+    textElement.textContent = customMessage;
+    currentMessage = customMessage;
+  } else if (currentMessage) {
+    // Keep showing the current message
+    textElement.textContent = currentMessage;
+  } else {
+    // Default message
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    textElement.textContent = `트랜잭션을 모니터링 중...\n${timeStr}`;
+  }
 }
 
 function removeCharacterUI(): void {
@@ -110,5 +122,45 @@ chrome.storage.onChanged.addListener((changes: { [key: string]: chrome.storage.S
     } else {
       removeCharacterUI();
     }
+  }
+});
+
+// Listen for webhook events from background script
+chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: any) => {
+  if (message.type === "WEBHOOK_EVENT") {
+    const timestamp = new Date().toLocaleTimeString("ko-KR");
+    console.log(`📨 [${timestamp}] Webhook event received in onchain-notification:`, {
+      messageType: message.type,
+      messageContent: message.message,
+      webhookData: message.data,
+      sender: sender?.tab?.url || "background",
+      currentCharacterVisible: !!document.getElementById(CHARACTER_ID),
+    });
+
+    // Format webhook message with chain info and proper value display
+    let displayMessage = message.message;
+    if (message.data) {
+      const { chain, from, to, value, status } = message.data;
+      const chainName = chain || "Unknown Chain";
+      const shortFrom = from ? `${from.slice(0, 6)}...${from.slice(-4)}` : "Unknown";
+      const shortTo = to ? `${to.slice(0, 6)}...${to.slice(-4)}` : "Unknown";
+      const statusIcon = status === "success" ? "✅" : status === "failed" ? "❌" : "⏳";
+
+      displayMessage = `🔗 트랜잭션 감지! [${chainName}]
+From: ${shortFrom}
+To: ${shortTo}
+Value: ${value || "0"}
+Status: ${statusIcon} ${status || "처리중"}`;
+    }
+
+    // Update balloon with formatted webhook message
+    updateBalloon(displayMessage);
+    console.log(`🎈 Balloon updated with webhook message at ${timestamp}`);
+
+    // Clear the custom message after 10 seconds
+    setTimeout(() => {
+      currentMessage = "";
+      console.log(`🕐 Custom message cleared after 10 seconds`);
+    }, 10000);
   }
 });

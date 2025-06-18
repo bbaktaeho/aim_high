@@ -161,6 +161,37 @@ window.addEventListener("message", async (event) => {
   }
 });
 
+// MetaMask event listeners for real-time updates
+(function () {
+  if (!window.ethereum) return;
+
+  // Listen for chain changes
+  window.ethereum.on("chainChanged", (chainId: string) => {
+    console.log("🔗 Chain changed to:", chainId);
+    window.postMessage(
+      {
+        type: "METAMASK_CHAIN_CHANGED",
+        chainId: chainId,
+      },
+      "*"
+    );
+  });
+
+  // Listen for account changes
+  window.ethereum.on("accountsChanged", (accounts: string[]) => {
+    console.log("👤 Accounts changed to:", accounts);
+    window.postMessage(
+      {
+        type: "METAMASK_ACCOUNTS_CHANGED",
+        accounts: accounts,
+      },
+      "*"
+    );
+  });
+
+  console.log("🦊 MetaMask event listeners initialized");
+})();
+
 // Transaction Checker: eth_sendTransaction 후킹
 (function () {
   console.log("Transaction Checker: script injected");

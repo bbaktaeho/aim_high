@@ -9,6 +9,49 @@ let isMetaMaskContentInitialized = false;
 const initializeMetaMaskContent = () => {
   console.log('🦊 Initializing MetaMask content script...');
   
+  // Listen for MetaMask events from page script
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    
+    if (event.data.type === 'METAMASK_CHAIN_CHANGED') {
+      console.log('🔗 Chain changed event received:', event.data.chainId);
+      
+      // Convert hex to decimal and update storage
+      const chainId = parseInt(event.data.chainId, 16);
+      chrome.storage.local.set({ walletChainId: chainId }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('❌ Error updating chainId in storage:', chrome.runtime.lastError);
+        } else {
+          console.log('💾 Updated chainId in storage:', chainId);
+        }
+      });
+    }
+    
+    if (event.data.type === 'METAMASK_ACCOUNTS_CHANGED') {
+      console.log('👤 Accounts changed event received:', event.data.accounts);
+      
+      const account = event.data.accounts.length > 0 ? event.data.accounts[0] : null;
+      if (account) {
+        chrome.storage.local.set({ walletAccount: account }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('❌ Error updating account in storage:', chrome.runtime.lastError);
+          } else {
+            console.log('💾 Updated account in storage:', account);
+          }
+        });
+      } else {
+        // Account disconnected
+        chrome.storage.local.remove(['walletAccount', 'walletChainId'], () => {
+          if (chrome.runtime.lastError) {
+            console.error('❌ Error removing wallet data from storage:', chrome.runtime.lastError);
+          } else {
+            console.log('🗑️ Removed wallet data from storage');
+          }
+        });
+      }
+    }
+  });
+  
   // Inject page script for MetaMask communication
   const script = document.createElement('script');
   script.src = chrome.runtime.getURL('page-script.js');

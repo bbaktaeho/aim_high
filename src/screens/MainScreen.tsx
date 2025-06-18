@@ -34,11 +34,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
   // Local state
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [noditApiKey, setNoditApiKey] = useState<string | null>(null);
+  const [isWebhookEnabled, setIsWebhookEnabled] = useState<boolean>(false);
 
-  // Load Nodit API key
+  // Load Nodit API key and webhook state
   useEffect(() => {
-    chrome.storage.local.get(['noditApiKey'], (result) => {
+    chrome.storage.local.get(['noditApiKey', 'isWebhookEnabled'], (result) => {
       setNoditApiKey(result.noditApiKey || null);
+      setIsWebhookEnabled(result.isWebhookEnabled || false);
     });
   }, []);
 
@@ -90,6 +92,56 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
   const handleRefreshStats = async () => {
     console.log('🔄 Refreshing account statistics...');
     await refreshStats(account, noditApiKey);
+  };
+
+  // Webhook management handlers
+  const handleWebhookToggle = async () => {
+    if (!account || !chainId || !noditApiKey) {
+      console.log('❌ Missing required data for webhook:', { account, chainId, noditApiKey: !!noditApiKey });
+      return;
+    }
+
+    console.log('🎣 Webhook toggle - chainId:', chainId, typeof chainId);
+
+    try {
+      const newWebhookState = !isWebhookEnabled;
+      
+      const response = await chrome.runtime.sendMessage({
+        type: 'MANAGE_WEBHOOK',
+        action: newWebhookState ? 'create' : 'delete',
+        account,
+        chainId, // This should be a number
+        apiKey: noditApiKey
+      });
+
+      if (response.success) {
+        setIsWebhookEnabled(newWebhookState);
+        await chrome.storage.local.set({ isWebhookEnabled: newWebhookState });
+        console.log(`✅ Webhook ${newWebhookState ? 'enabled' : 'disabled'} successfully`);
+      } else {
+        console.error('❌ Webhook operation failed:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Failed to manage webhook:', error);
+    }
+  };
+
+  // Test webhook simulation
+  const handleTestWebhook = async () => {
+    if (!account) return;
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SIMULATE_WEBHOOK',
+        from: '0x742d35Cc6634C0532925a3b8D4Cc23d3b8f5e5e5',
+        to: account,
+        value: '1000000000000000000', // 1 ETH in wei
+        network: 'ethereum'
+      });
+      console.log('✅ Test webhook event sent');
+    } catch (error) {
+      console.error('❌ Failed to send test webhook:', error);
+    }
   };
 
   return (
@@ -172,6 +224,71 @@ export const MainScreen: React.FC<MainScreenProps> = ({ onOpenOptions }) => {
             account={account && chainId ? { account, chainId } : null}
             noditApiKey={noditApiKey}
           />
+
+          {/* Webhook Controls */}
+          {account && chainId && noditApiKey && (
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: '#111',
+              borderRadius: '8px',
+              border: '1px solid #333'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px'
+              }}>
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  color: '#00d16c'
+                }}>
+                  🎣 실시간 웹훅 모니터링
+                </span>
+                <button
+                  onClick={handleWebhookToggle}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    backgroundColor: isWebhookEnabled ? '#00d16c' : '#666',
+                    color: 'white',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {isWebhookEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div style={{
+                fontSize: '11px',
+                color: '#999',
+                marginBottom: '8px'
+              }}>
+                계정의 트랜잭션 활동을 실시간으로 모니터링합니다
+              </div>
+              {isWebhookEnabled && (
+                <button
+                  onClick={handleTestWebhook}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #00d16c',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    backgroundColor: 'transparent',
+                    color: '#00d16c',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  테스트 알림 전송
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Transaction Information */}
           {transactionData && <TransactionInfo data={transactionData} />}

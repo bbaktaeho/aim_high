@@ -27,46 +27,64 @@ export const useMetaMask = () => {
   const loadConnectionStateFromStorage = useCallback(async () => {
     console.log("📦 Loading connection state from storage...");
 
-    try {
-      const result = await chrome.storage.local.get(["walletAccount", "walletChainId"]);
+    return new Promise<void>((resolve) => {
+      chrome.storage.local.get(["walletAccount", "walletChainId"], (result) => {
+        if (chrome.runtime.lastError) {
+          console.error("❌ Error loading from storage:", chrome.runtime.lastError);
+          setState((prev) => ({
+            ...prev,
+            isInitializing: false,
+          }));
+          resolve();
+          return;
+        }
 
-      if (result.walletAccount) {
-        console.log("✅ Found stored wallet:", result.walletAccount);
-        setState((prev) => ({
-          ...prev,
-          account: result.walletAccount,
-          chainId: result.walletChainId || null,
-          isInitializing: false,
-          error: null,
-        }));
-      } else {
-        console.log("🆕 No stored connection found");
-        setState((prev) => ({
-          ...prev,
-          isInitializing: false,
-        }));
-      }
-    } catch (error) {
-      console.error("❌ Error loading from storage:", error);
-      setState((prev) => ({
-        ...prev,
-        isInitializing: false,
-      }));
-    }
+        if (result.walletAccount) {
+          console.log("✅ Found stored wallet:", result.walletAccount, "chainId:", result.walletChainId);
+          setState((prev) => ({
+            ...prev,
+            account: result.walletAccount,
+            chainId: result.walletChainId || null,
+            isInitializing: false,
+            error: null,
+          }));
+        } else {
+          console.log("🆕 No stored connection found");
+          setState((prev) => ({
+            ...prev,
+            isInitializing: false,
+          }));
+        }
+        resolve();
+      });
+    });
   }, []);
 
   // Storage에 연결 상태 저장
-  const saveConnectionStateToStorage = useCallback(async (account: string, chainId: number | null) => {
-    try {
-      await chrome.storage.local.set({
-        walletAccount: account,
-        walletChainId: chainId,
-        walletConnectedAt: Date.now(),
-      });
-      console.log("💾 Saved to storage:", { account, chainId });
-    } catch (error) {
-      console.error("❌ Error saving to storage:", error);
-    }
+  const saveConnectionStateToStorage = useCallback(async (account: string, chainId: number | null): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.storage.local.set(
+          {
+            walletAccount: account,
+            walletChainId: chainId,
+            walletConnectedAt: Date.now(),
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error("❌ Error saving to storage:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+            } else {
+              console.log("💾 Saved to storage:", { account, chainId });
+              resolve();
+            }
+          }
+        );
+      } catch (error) {
+        console.error("❌ Error saving to storage:", error);
+        reject(error);
+      }
+    });
   }, []);
 
   // 컴포넌트 마운트 시 저장된 상태 로드
@@ -77,17 +95,21 @@ export const useMetaMask = () => {
   // Storage 변경 이벤트 감지 (탭 동기화)
   useEffect(() => {
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
-      if (changes.walletAccount) {
-        const newAccount = changes.walletAccount.newValue || null;
+      if (changes.walletAccount || changes.walletChainId) {
+        const newAccount = changes.walletAccount?.newValue || null;
         const newChainId = changes.walletChainId?.newValue || null;
 
+        // 계정이나 체인 ID 중 하나라도 변경되면 상태 업데이트
         setState((prev) => ({
           ...prev,
-          account: newAccount,
-          chainId: newChainId,
+          account: newAccount !== undefined ? newAccount : prev.account,
+          chainId: newChainId !== undefined ? newChainId : prev.chainId,
         }));
 
-        console.log("🔄 State synced from storage:", { account: newAccount, chainId: newChainId });
+        console.log("🔄 State synced from storage:", {
+          account: newAccount !== undefined ? newAccount : "unchanged",
+          chainId: newChainId !== undefined ? newChainId : "unchanged",
+        });
       }
     };
 
@@ -226,22 +248,56 @@ export const useMetaMask = () => {
 
       if (response?.type === "ACCOUNTS_RESULT" && response.data?.length > 0) {
         const account = response.data[0];
+        console.log("✅ Account received:", account);
 
-        // 체인 정보 가져오기
+        // 체인 정보 가져오기 - 반드시 성공할 때까지 재시도
         let chainId = null;
-        try {
-          const infoResponse = await chrome.tabs.sendMessage(currentTab.id, {
-            type: "GET_METAMASK_INFO_WITH_ACCOUNTS",
-          });
+        let retryCount = 0;
+        const maxRetries = 3;
 
-          if (infoResponse?.data?.chainId) {
-            chainId = parseInt(infoResponse.data.chainId, 16);
+        while (retryCount < maxRetries && chainId === null) {
+          try {
+            console.log(`🔗 Attempting to get chain info (attempt ${retryCount + 1}/${maxRetries})`);
+
+            const infoResponse = await chrome.tabs.sendMessage(currentTab.id, {
+              type: "GET_METAMASK_INFO_WITH_ACCOUNTS",
+            });
+
+            console.log("🔗 Raw MetaMask info response:", infoResponse);
+
+            if (infoResponse?.data?.chainId) {
+              const rawChainId = infoResponse.data.chainId;
+              console.log("🔗 Raw chainId from MetaMask:", rawChainId, typeof rawChainId);
+
+              // Convert hex string to decimal number
+              chainId = parseInt(rawChainId, 16);
+              console.log("🔗 Converted chainId:", chainId, typeof chainId);
+              break; // 성공하면 루프 종료
+            } else {
+              console.warn("❌ No chainId in response, retrying...");
+            }
+          } catch (e) {
+            console.warn("❌ Failed to get chain info:", e);
           }
-        } catch (e) {
-          console.warn("Could not get chain info");
+
+          retryCount++;
+          if (retryCount < maxRetries) {
+            // 재시도 전 잠시 대기
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
         }
 
-        // 상태 업데이트
+        if (chainId === null) {
+          console.error("❌ Failed to get chainId after all retries");
+        }
+
+        console.log("📦 Final connection data:", { account, chainId });
+
+        // Storage에 먼저 저장 (동기적으로 완료 대기)
+        await saveConnectionStateToStorage(account, chainId);
+        console.log("💾 Storage save completed");
+
+        // 그 다음 상태 업데이트
         setState((prev) => ({
           ...prev,
           account,
@@ -251,10 +307,7 @@ export const useMetaMask = () => {
           error: null,
         }));
 
-        // Storage에 저장
-        await saveConnectionStateToStorage(account, chainId);
-
-        console.log("✅ Connection successful:", { account, chainId });
+        console.log("✅ Connection successful and state updated:", { account, chainId });
       } else if (response?.type === "ACCOUNTS_ERROR") {
         const error = response.error;
         let errorMessage = "Connection failed";

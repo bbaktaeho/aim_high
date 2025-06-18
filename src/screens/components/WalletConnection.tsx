@@ -25,6 +25,19 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
   connectWallet,
   disconnectWallet,
 }) => {
+  // Debug logging for chain ID
+  console.log('🔗 WalletConnection - chainId:', chainId, typeof chainId);
+  
+  // Get chain configuration
+  const chainConfig = chainId ? CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG] : null;
+  console.log('🔗 Chain config lookup:', chainConfig);
+  
+  // Force re-render when chainId changes to ensure UI updates
+  React.useEffect(() => {
+    if (chainId) {
+      console.log('🔄 ChainId changed in WalletConnection:', chainId, '-> Config:', chainConfig);
+    }
+  }, [chainId, chainConfig]);
   return (
     <div style={{
       backgroundColor: '#1a1a1a',
@@ -125,7 +138,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
               </div>
               
               {/* 체인 정보 (작은 텍스트) */}
-              {chainId && CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG] && (
+              {chainId && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -135,14 +148,14 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
                     width: '6px',
                     height: '6px',
                     borderRadius: '50%',
-                    backgroundColor: CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].color,
+                    backgroundColor: chainConfig?.color || '#666',
                   }} />
                   <span style={{
                     fontSize: '11px',
                     color: '#aaa',
                     fontWeight: '400',
               }}>
-                {CHAIN_CONFIG[chainId as keyof typeof CHAIN_CONFIG].name}
+                {chainConfig?.name || `Chain ID: ${chainId}`}
               </span>
             </div>
           )}
