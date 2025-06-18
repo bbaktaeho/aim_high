@@ -267,7 +267,7 @@ export const formatWebhookData = (
     chainName = data.network.charAt(0).toUpperCase() + data.network.slice(1);
   }
 
-  let message = `🔗 트랜잭션 감지! [${chainName}]\n${timeStr}\n`;
+  let message = `트랜잭션 감지 [${chainName}]\n${timeStr}\n`;
   message += `From: ${data.from.slice(0, 6)}...${data.from.slice(-4)}\n`;
   message += `To: ${data.to.slice(0, 6)}...${data.to.slice(-4)}\n`;
 

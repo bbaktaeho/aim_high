@@ -8,6 +8,7 @@ interface NoditStreamParams {
   condition: {
     addresses: string[];
   };
+  isInstant: boolean;
 }
 
 interface NoditStreamOptions {
@@ -69,6 +70,7 @@ export class NoditStreamService {
         condition: {
           addresses: [account],
         },
+        isInstant: true,
       };
 
       const options: NoditStreamOptions = {
