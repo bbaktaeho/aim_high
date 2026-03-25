@@ -86,14 +86,19 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
       }
     } else if (address.startsWith('0x') && address.length === 42) {
       addressType = 'evm';
-      // EVM 멀티체인 목록 (Nodit 지원 체인)
+      // EVM 멀티체인 목록 (Nodit Data API 지원 체인)
       const evmChains = [
         { protocol: 'ethereum', network: 'mainnet' },
         { protocol: 'polygon', network: 'mainnet' },
         { protocol: 'arbitrum', network: 'mainnet' },
         { protocol: 'base', network: 'mainnet' },
         { protocol: 'optimism', network: 'mainnet' },
-        { protocol: 'kaia', network: 'mainnet' }
+        { protocol: 'kaia', network: 'mainnet' },
+        { protocol: 'bnb', network: 'mainnet' },
+        { protocol: 'chiliz', network: 'mainnet' },
+        { protocol: 'ethereumclassic', network: 'mainnet' },
+        { protocol: 'giwa', network: 'sepolia' },
+        { protocol: 'arc', network: 'testnet' },
       ];
       
       // 2. EVM 주소라면 각 체인에서 getTotalTransactionCountByAccount 먼저 호출하여 활성 체인 확인
@@ -274,12 +279,15 @@ const analyzeAccount = async (address: string, contentDiv: HTMLDivElement) => {
 
   } catch (error) {
     console.error('Error analyzing account:', error);
+    const isContextInvalidated = error instanceof Error && error.message.includes('Extension context invalidated');
     contentDiv.innerHTML = `
       <div style="color: #EF4444; font-weight: 500;">
-        ❌ Analysis failed
+        ${isContextInvalidated ? '⚠️ Extension reloaded' : '❌ Analysis failed'}
       </div>
       <div style="color: #6B7280; font-size: 12px; margin-top: 4px;">
-        ${error instanceof Error ? error.message : 'Unknown error occurred'}
+        ${isContextInvalidated
+          ? 'Please reload this page (Cmd+R / F5) to reconnect the extension.'
+          : error instanceof Error ? error.message : 'Unknown error occurred'}
       </div>
     `;
   }
@@ -480,7 +488,12 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
     'base': '#0052FF',
     'optimism': '#FF0420',
     'kaia': '#FF6B35',
-    'tron': '#FF060A'
+    'tron': '#FF060A',
+    'bnb': '#F3BA2F',
+    'chiliz': '#CD0124',
+    'ethereumclassic': '#328432',
+    'giwa': '#6C63FF',
+    'arc': '#00C2FF',
   };
 
   // 네트워크별 아이콘
@@ -491,7 +504,12 @@ const renderMultiChainAnalysis = (contentDiv: HTMLDivElement, data: any) => {
     'base': '🔷',
     'optimism': '○',
     'kaia': '🟡',
-    'tron': '🔴'
+    'tron': '🔴',
+    'bnb': '🟨',
+    'chiliz': '🌶️',
+    'ethereumclassic': '💚',
+    'giwa': '🔮',
+    'arc': '🔵',
   };
 
   // 요약 정보 계산

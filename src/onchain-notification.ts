@@ -57,7 +57,7 @@ function showBalloon(message: string, streamData?: any): void {
   balloon.style.fontWeight = "500";
   balloon.style.boxShadow = "0 4px 20px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)";
   balloon.style.border = "1px solid rgba(0,0,0,0.06)";
-  balloon.style.pointerEvents = "auto";
+  balloon.style.pointerEvents = "none";
   balloon.style.maxWidth = "240px"; // 최대 너비 제한
   balloon.style.minWidth = "80px"; // 최소 너비
   balloon.style.textAlign = "left";
